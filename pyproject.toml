@@ -20,6 +20,9 @@ dev = [
   "pytest-cov>=5.0,<6.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/zprompt_helper"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
