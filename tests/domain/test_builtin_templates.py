@@ -37,9 +37,10 @@ def test_text_in_image_template_contains_text_blocks() -> None:
 
 def test_builtin_templates_satisfy_catalog_invariants() -> None:
     for template in load_builtin_templates():
+        assert len(template.block_order) == len(set(template.block_order))
         assert set(template.block_order) == set(template.blocks)
         assert all(block_id == block.id for block_id, block in template.blocks.items())
-        assert _placeholders(template.assembly_formula) <= set(template.blocks)
+        assert _placeholders(template.assembly_formula) == set(template.blocks)
 
 
 def test_template_definition_rejects_invalid_catalog_invariants() -> None:
@@ -52,5 +53,36 @@ def test_template_definition_rejects_invalid_catalog_invariants() -> None:
             block_order=["subject"],
             blocks={"scene": BlockDefinition(id="different", label="Scene")},
             assembly_formula="{subject}, {missing}",
+            template_system_prompt="Return JSON",
+        )
+
+
+def test_template_definition_rejects_duplicate_block_order_ids() -> None:
+    with pytest.raises(ValidationError):
+        TemplateDefinition(
+            id="duplicate-order",
+            name="Duplicate Order",
+            description="Invalid template",
+            origin="built_in",
+            block_order=["subject", "subject"],
+            blocks={"subject": BlockDefinition(id="subject", label="Subject")},
+            assembly_formula="{subject}",
+            template_system_prompt="Return JSON",
+        )
+
+
+def test_template_definition_rejects_formula_that_omits_declared_block() -> None:
+    with pytest.raises(ValidationError):
+        TemplateDefinition(
+            id="missing-placeholder",
+            name="Missing Placeholder",
+            description="Invalid template",
+            origin="built_in",
+            block_order=["subject", "style"],
+            blocks={
+                "subject": BlockDefinition(id="subject", label="Subject"),
+                "style": BlockDefinition(id="style", label="Style"),
+            },
+            assembly_formula="{subject}",
             template_system_prompt="Return JSON",
         )

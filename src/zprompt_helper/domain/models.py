@@ -28,6 +28,9 @@ class TemplateDefinition(BaseModel):
     def validate_block_catalog(self) -> "TemplateDefinition":
         ordered_blocks = set(self.block_order)
         block_keys = set(self.blocks)
+        if len(self.block_order) != len(ordered_blocks):
+            raise ValueError("block_order must not contain duplicate block ids")
+
         if ordered_blocks != block_keys:
             raise ValueError("block_order must contain exactly the same block ids as blocks")
 
@@ -44,8 +47,7 @@ class TemplateDefinition(BaseModel):
             for _, field_name, _, _ in Formatter().parse(self.assembly_formula)
             if field_name
         }
-        unknown_placeholders = placeholders - block_keys
-        if unknown_placeholders:
-            raise ValueError(f"assembly_formula contains unknown block placeholders: {sorted(unknown_placeholders)}")
+        if placeholders != block_keys:
+            raise ValueError("assembly_formula placeholders must match defined block ids exactly")
 
         return self
