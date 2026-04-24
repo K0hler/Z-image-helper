@@ -5,6 +5,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 from zprompt_helper.secrets.secret_store import KeyringSecretStore
+from zprompt_helper.generation.service import GenerationService
+from zprompt_helper.openrouter.client import OpenRouterClient
 from zprompt_helper.services.settings_service import SettingsService
 from zprompt_helper.storage.history_store import HistoryStore
 from zprompt_helper.storage.paths import ProjectPaths
@@ -23,25 +25,30 @@ def main() -> None:
     st.set_page_config(page_title="Z-Prompt-Helper", layout="wide")
     paths = ProjectPaths.from_root(ROOT)
     settings_service = SettingsService(SettingsStore(paths), KeyringSecretStore())
-    history_entries = HistoryStore(paths).export_all()
+    history_store = HistoryStore(paths)
+    history_entries = history_store.export_all()
     built_in_templates = load_builtin_templates()
-    custom_templates = TemplateStore(paths).load_all()
+    template_store = TemplateStore(paths)
+    custom_templates = template_store.load_all()
     page = st.sidebar.radio("Раздел", options=["Workbench", "Template Manager", "Settings"])
 
     if page == "Workbench":
         templates = [*built_in_templates, *custom_templates]
         render_workbench(
             {
-                "template_names": [template.name for template in templates],
+                "templates": templates,
+                "settings_service": settings_service,
+                "generation_factory": lambda api_key: GenerationService(OpenRouterClient(api_key)),
+                "history_store": history_store,
                 "paths": paths,
             }
         )
-        render_history_panel(history_entries)
+        render_history_panel(history_entries, history_store)
     elif page == "Template Manager":
-        render_template_manager(custom_templates, built_in_templates)
+        render_template_manager(custom_templates, built_in_templates, template_store)
     else:
         settings_vm = asdict(settings_service.load())
-        render_settings_page(settings_vm)
+        render_settings_page(settings_vm, settings_service=settings_service)
 
 
 if __name__ == "__main__":
