@@ -69,6 +69,20 @@ def test_rebuild_prompt_missing_blocks_render_empty_and_strip_trailing_separator
     assert rebuilt == "portrait of a chrome robot"
 
 
+def test_rebuild_prompt_collapses_missing_middle_segments() -> None:
+    template = make_template(
+        ["subject", "style", "details"],
+        "{subject}, {style}, {details}",
+    )
+    session = EditorSession(
+        block_values={"subject": "cat", "details": "blue background"}
+    )
+
+    rebuilt = rebuild_prompt(template, session)
+
+    assert rebuilt == "cat, blue background"
+
+
 def test_set_block_value_updates_block_values() -> None:
     session = EditorSession(block_values={"subject": "cat"})
 

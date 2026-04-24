@@ -16,7 +16,9 @@ def rebuild_prompt(template: TemplateDefinition, session: EditorSession) -> str:
         block_id: session.block_values.get(block_id, "")
         for block_id in template.block_order
     }
-    return template.assembly_formula.format(**values).strip(", ")
+    prompt = template.assembly_formula.format(**values)
+    segments = [segment.strip() for segment in prompt.split(",")]
+    return ", ".join(segment for segment in segments if segment).strip(", ")
 
 
 def merge_generated_blocks(
