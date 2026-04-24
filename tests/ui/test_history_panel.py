@@ -22,3 +22,14 @@ def test_summarize_history_entries_handles_iso_strings_with_timezone() -> None:
     summary = summarize_history_entries(items)
 
     assert [item["id"] for item in summary] == ["later", "utc", "yekaterinburg"]
+
+
+def test_summarize_history_entries_handles_mixed_naive_and_aware_iso_strings() -> None:
+    items = [
+        {"id": "naive", "prompt_text": "first", "created_at": "2026-04-24T10:00:00"},
+        {"id": "aware", "prompt_text": "second", "created_at": "2026-04-24T12:00:00+00:00"},
+    ]
+
+    summary = summarize_history_entries(items)
+
+    assert [item["id"] for item in summary] == ["aware", "naive"]

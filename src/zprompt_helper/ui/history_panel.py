@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -18,8 +18,13 @@ def render_history_panel(entries: list[dict]) -> None:
     st.button("Очистить историю", key="clear_history")
 
 
-def _created_at_sort_key(entry: dict[str, Any]) -> datetime:
+def _created_at_sort_key(entry: dict[str, Any]) -> float:
     created_at = entry["created_at"]
     if isinstance(created_at, datetime):
-        return created_at
-    return datetime.fromisoformat(str(created_at))
+        parsed = created_at
+    else:
+        parsed = datetime.fromisoformat(str(created_at))
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).timestamp()

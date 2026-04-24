@@ -26,7 +26,6 @@ def main() -> None:
     history_entries = HistoryStore(paths).export_all()
     built_in_templates = load_builtin_templates()
     custom_templates = TemplateStore(paths).load_all()
-    settings_vm = asdict(settings_service.load())
     page = st.sidebar.radio("Раздел", options=["Workbench", "Template Manager", "Settings"])
 
     if page == "Workbench":
@@ -41,6 +40,7 @@ def main() -> None:
     elif page == "Template Manager":
         render_template_manager(custom_templates, built_in_templates)
     else:
+        settings_vm = asdict(settings_service.load())
         render_settings_page(settings_vm)
 
 
