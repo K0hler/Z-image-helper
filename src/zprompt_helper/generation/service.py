@@ -6,6 +6,10 @@ import httpx
 from zprompt_helper.openrouter.client import OpenRouterClient
 
 
+class GenerationResponseError(ValueError):
+    pass
+
+
 class GenerationService:
     def __init__(self, client: OpenRouterClient) -> None:
         self.client = client
@@ -54,9 +58,12 @@ class GenerationService:
                 content = self._extract_content(response)
                 parsed = json.loads(content)
                 return self._validate_payload(parsed, active_blocks)
-            except (JSONDecodeError, TypeError, KeyError, IndexError, ValueError):
+            except (JSONDecodeError, TypeError, KeyError, IndexError, ValueError) as exc:
                 if validation_retry:
-                    raise
+                    raise GenerationResponseError(
+                        "Generation response stayed invalid after retry for blocks: "
+                        f"{', '.join(active_blocks)}"
+                    ) from exc
                 validation_retry = True
 
     def _build_payload(
@@ -154,7 +161,15 @@ class GenerationService:
         if missing or extra:
             raise ValueError(f"Invalid block payload. missing={missing} extra={extra}")
 
-        return {block_id: str(payload[block_id]).strip() for block_id in active_blocks}
+        non_string = [
+            block_id
+            for block_id in active_blocks
+            if not isinstance(payload[block_id], str)
+        ]
+        if non_string:
+            raise ValueError(f"Invalid block value type. non_string={non_string}")
+
+        return {block_id: payload[block_id].strip() for block_id in active_blocks}
 
     @staticmethod
     def _extract_content(response: dict) -> str:

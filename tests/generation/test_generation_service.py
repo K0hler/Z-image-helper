@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from zprompt_helper.generation.service import GenerationService
+from zprompt_helper.generation.service import GenerationResponseError, GenerationService
 from zprompt_helper.openrouter.client import OpenRouterClient
 
 
@@ -231,7 +231,79 @@ def test_extra_keys_retry_then_final_validation_error_if_still_invalid() -> None
 
     service = _service_with_handler(handler)
 
-    with pytest.raises(ValueError, match="extra=\\['extra'\\]"):
+    with pytest.raises(GenerationResponseError, match="subject, style"):
+        _generate(service)
+
+    assert calls == 2
+
+
+def test_non_string_block_values_trigger_retry_and_succeed_if_retry_returns_strings() -> None:
+    calls = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            content = {"subject": 123, "style": "cinematic"}
+        else:
+            content = {"subject": "robot", "style": "cinematic"}
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(content)}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    result = _generate(service)
+
+    assert result == {"subject": "robot", "style": "cinematic"}
+    assert calls == 2
+
+
+def test_permanently_invalid_json_raises_generation_response_error_after_two_calls() -> None:
+    calls = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "not-json"}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError, match="subject, style") as exc_info:
+        _generate(service)
+
+    assert calls == 2
+    assert isinstance(exc_info.value.__cause__, json.JSONDecodeError)
+
+
+def test_permanently_non_string_block_values_raise_generation_response_error() -> None:
+    calls = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {"subject": ["robot"], "style": "cinematic"}
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError, match="subject, style"):
         _generate(service)
 
     assert calls == 2
