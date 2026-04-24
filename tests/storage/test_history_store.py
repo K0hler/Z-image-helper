@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from zprompt_helper.storage.history_store import HistoryStore
 from zprompt_helper.storage.paths import ProjectPaths
 
@@ -74,3 +76,15 @@ def test_history_store_import_many_skips_duplicate_ids_and_preserves_ids(tmp_pat
     assert count == 1
     assert [item["id"] for item in exported] == [existing.id, "imported-id"]
     assert exported[1]["created_at"] == "2026-04-25T12:00:00+00:00"
+
+
+def test_history_store_delete_entry_rejects_invalid_date_key_without_touching_outside_history_dir(tmp_path) -> None:
+    store = HistoryStore(ProjectPaths.from_root(tmp_path))
+    target = tmp_path / "data" / "settings.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text('[{"id": "outside", "prompt_text": "keep"}]', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="date key"):
+        store.delete_entry("../settings", "outside")
+
+    assert target.read_text(encoding="utf-8") == '[{"id": "outside", "prompt_text": "keep"}]'

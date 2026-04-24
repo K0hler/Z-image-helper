@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -6,6 +7,9 @@ from uuid import uuid4
 from pydantic import BaseModel, field_serializer
 
 from zprompt_helper.storage.paths import ProjectPaths
+
+
+_DATE_KEY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class HistoryEntry(BaseModel):
@@ -34,6 +38,7 @@ class HistoryStore:
         return entry
 
     def delete_entry(self, date_key: str, entry_id: str) -> None:
+        self._validate_date_key(date_key)
         target = self.paths.history_dir / f"{date_key}.json"
         if not target.exists():
             return
@@ -86,3 +91,13 @@ class HistoryStore:
             json.dumps(entries, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+
+    @staticmethod
+    def _validate_date_key(date_key: str) -> None:
+        if not _DATE_KEY.fullmatch(date_key):
+            raise ValueError("date key must use YYYY-MM-DD format")
+
+        try:
+            datetime.strptime(date_key, "%Y-%m-%d")
+        except ValueError as error:
+            raise ValueError("date key must use YYYY-MM-DD format") from error

@@ -1,3 +1,5 @@
+import pytest
+
 from zprompt_helper.domain.models import BlockDefinition, TemplateDefinition
 from zprompt_helper.storage.paths import ProjectPaths
 from zprompt_helper.storage.template_store import TemplateStore
@@ -69,3 +71,23 @@ def test_template_store_import_many_skips_existing_and_non_custom_templates(tmp_
 
     assert count == 1
     assert [template.id for template in store.load_all()] == ["existing", "new-custom"]
+
+
+def test_template_store_save_rejects_unsafe_template_id_without_writing_outside_templates_dir(tmp_path) -> None:
+    store = TemplateStore(ProjectPaths.from_root(tmp_path))
+
+    with pytest.raises(ValueError, match="template id"):
+        store.save(_template("../settings"))
+
+    assert not (tmp_path / "data" / "settings.json").exists()
+    assert store.load_all() == []
+
+
+def test_template_store_import_many_rejects_unsafe_template_id_without_writing_outside_templates_dir(tmp_path) -> None:
+    store = TemplateStore(ProjectPaths.from_root(tmp_path))
+
+    with pytest.raises(ValueError, match="template id"):
+        store.import_many([_template("../settings").model_dump(mode="json")])
+
+    assert not (tmp_path / "data" / "settings.json").exists()
+    assert store.load_all() == []

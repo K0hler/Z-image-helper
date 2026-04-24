@@ -1,8 +1,12 @@
+import re
 from pathlib import Path
 from uuid import uuid4
 
 from zprompt_helper.domain.models import TemplateDefinition
 from zprompt_helper.storage.paths import ProjectPaths
+
+
+_SAFE_TEMPLATE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class TemplateStore:
@@ -17,6 +21,7 @@ class TemplateStore:
         ]
 
     def save(self, template: TemplateDefinition) -> Path:
+        self._validate_template_id(template.id)
         target = self.paths.templates_dir / f"{template.id}.json"
         target.write_text(template.model_dump_json(indent=2), encoding="utf-8")
         return target
@@ -41,6 +46,7 @@ class TemplateStore:
 
         for item in items:
             template = TemplateDefinition.model_validate(item)
+            self._validate_template_id(template.id)
             if template.origin != "custom" or template.id in existing_ids:
                 continue
 
@@ -49,3 +55,8 @@ class TemplateStore:
             imported += 1
 
         return imported
+
+    @staticmethod
+    def _validate_template_id(template_id: str) -> None:
+        if not _SAFE_TEMPLATE_ID.fullmatch(template_id):
+            raise ValueError("template id must contain only ASCII letters, digits, underscores, and hyphens")
