@@ -42,12 +42,12 @@ class TemplateDefinition(BaseModel):
         if mismatched_ids:
             raise ValueError(f"block keys must match nested block ids: {mismatched_ids}")
 
-        placeholders = {
+        placeholders = [
             field_name
             for _, field_name, _, _ in Formatter().parse(self.assembly_formula)
             if field_name
-        }
-        if placeholders != block_keys:
-            raise ValueError("assembly_formula placeholders must match defined block ids exactly")
+        ]
+        if placeholders != self.block_order:
+            raise ValueError("assembly_formula placeholders must match block_order exactly")
 
         return self
