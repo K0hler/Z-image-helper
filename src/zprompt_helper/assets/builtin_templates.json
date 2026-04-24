@@ -1,0 +1,324 @@
+[
+  {
+    "id": "universal",
+    "name": "Universal",
+    "description": "A flexible starter template for clear image prompts across everyday subjects and styles.",
+    "origin": "built_in",
+    "block_order": ["subject", "scene", "composition", "lighting", "style", "details", "constraints"],
+    "blocks": {
+      "subject": {
+        "id": "subject",
+        "label": "Subject",
+        "instruction": "Describe the main subject, its defining traits, and the intended focal point."
+      },
+      "scene": {
+        "id": "scene",
+        "label": "Scene",
+        "instruction": "Describe the setting, surrounding context, and the subject's relationship to the environment."
+      },
+      "composition": {
+        "id": "composition",
+        "label": "Composition",
+        "instruction": "Define framing, camera angle, crop, depth, and visual hierarchy."
+      },
+      "lighting": {
+        "id": "lighting",
+        "label": "Lighting",
+        "instruction": "Describe light direction, contrast, mood, color temperature, and shadows."
+      },
+      "style": {
+        "id": "style",
+        "label": "Style",
+        "instruction": "Specify the visual style, medium, finish, and overall aesthetic language."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Add important materials, textures, small features, atmosphere, and quality cues."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State strict requirements, exclusions, readability needs, and artifact controls."
+      }
+    },
+    "assembly_formula": "{subject}, {scene}, {composition}, {lighting}, {style}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Build a concise, direct English image prompt with concrete visual details and no extra commentary."
+  },
+  {
+    "id": "cinematic",
+    "name": "Cinematic",
+    "description": "Film-still prompts focused on dramatic framing, lens language, lighting, and mood.",
+    "origin": "built_in",
+    "block_order": ["subject", "scene", "shot", "lighting", "color_grade", "details", "constraints"],
+    "blocks": {
+      "subject": {
+        "id": "subject",
+        "label": "Subject",
+        "instruction": "Describe the actor, object, or main action with film-scene specificity."
+      },
+      "scene": {
+        "id": "scene",
+        "label": "Scene",
+        "instruction": "Describe the location, time, atmosphere, and narrative context."
+      },
+      "shot": {
+        "id": "shot",
+        "label": "Shot",
+        "instruction": "Specify shot size, lens feel, camera height, movement, and depth of field."
+      },
+      "lighting": {
+        "id": "lighting",
+        "label": "Lighting",
+        "instruction": "Describe motivated light sources, contrast, rim light, practicals, haze, and shadow shape."
+      },
+      "color_grade": {
+        "id": "color_grade",
+        "label": "Color Grade",
+        "instruction": "Define palette, film stock feel, saturation, contrast curve, and grade mood."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Add production design, costume, texture, weather, and cinematic realism cues."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State what must remain believable, coherent, and free of visual artifacts."
+      }
+    },
+    "assembly_formula": "cinematic film still, {subject}, {scene}, {shot}, {lighting}, {color_grade}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Write in the language of cinema: framing, lens, lighting, color grade, and production detail."
+  },
+  {
+    "id": "photorealism",
+    "name": "Photorealism",
+    "description": "Realistic image prompts with camera, lens, material, and natural-light specificity.",
+    "origin": "built_in",
+    "block_order": ["subject", "environment", "camera", "lighting", "materials", "details", "constraints"],
+    "blocks": {
+      "subject": {
+        "id": "subject",
+        "label": "Subject",
+        "instruction": "Describe the real-world subject, scale, pose, condition, and key identifying details."
+      },
+      "environment": {
+        "id": "environment",
+        "label": "Environment",
+        "instruction": "Describe the location, background, weather, surfaces, and believable context."
+      },
+      "camera": {
+        "id": "camera",
+        "label": "Camera",
+        "instruction": "Specify camera viewpoint, lens length, aperture feel, focus, and natural perspective."
+      },
+      "lighting": {
+        "id": "lighting",
+        "label": "Lighting",
+        "instruction": "Describe realistic light sources, exposure, shadow softness, reflections, and time of day."
+      },
+      "materials": {
+        "id": "materials",
+        "label": "Materials",
+        "instruction": "Describe true-to-life textures, surface wear, fabric, skin, glass, metal, or organic detail."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Add photographic quality cues such as micro-contrast, accurate scale, and plausible imperfections."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State realism requirements and exclude stylization, impossible anatomy, distortion, and fake text."
+      }
+    },
+    "assembly_formula": "photorealistic image, {subject}, {environment}, {camera}, {lighting}, {materials}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Prioritize physically plausible detail, natural perspective, and real photographic language."
+  },
+  {
+    "id": "art_illustration",
+    "name": "Art / Illustration",
+    "description": "Illustrative prompts for stylized artwork, visual development, posters, and editorial art.",
+    "origin": "built_in",
+    "block_order": ["subject", "concept", "composition", "medium", "palette", "details", "constraints"],
+    "blocks": {
+      "subject": {
+        "id": "subject",
+        "label": "Subject",
+        "instruction": "Describe the illustrated subject, silhouette, pose, expression, and key motifs."
+      },
+      "concept": {
+        "id": "concept",
+        "label": "Concept",
+        "instruction": "Describe the idea, story, symbolism, or emotional direction behind the artwork."
+      },
+      "composition": {
+        "id": "composition",
+        "label": "Composition",
+        "instruction": "Define layout, focal path, shape language, balance, negative space, and scale."
+      },
+      "medium": {
+        "id": "medium",
+        "label": "Medium",
+        "instruction": "Specify medium and finish, such as gouache, ink, vector, concept art, or painterly digital."
+      },
+      "palette": {
+        "id": "palette",
+        "label": "Palette",
+        "instruction": "Define color palette, contrast strategy, edge treatment, and graphic mood."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Add pattern, texture, brushwork, line quality, ornament, and rendering priorities."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State style consistency, clean edges, coherent anatomy, and artifact exclusions."
+      }
+    },
+    "assembly_formula": "illustration, {subject}, {concept}, {composition}, {medium}, {palette}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Shape the result as an art-directable illustration prompt with clear medium, composition, and palette choices."
+  },
+  {
+    "id": "character",
+    "name": "Character",
+    "description": "Character-focused prompts for portraits, full-body designs, costumes, and personality cues.",
+    "origin": "built_in",
+    "block_order": ["identity", "appearance", "pose", "wardrobe", "environment", "style", "constraints"],
+    "blocks": {
+      "identity": {
+        "id": "identity",
+        "label": "Identity",
+        "instruction": "Describe the character archetype, role, personality, age impression, and emotional tone."
+      },
+      "appearance": {
+        "id": "appearance",
+        "label": "Appearance",
+        "instruction": "Describe face, hair, body language, distinguishing features, and proportions."
+      },
+      "pose": {
+        "id": "pose",
+        "label": "Pose",
+        "instruction": "Specify pose, gesture, expression, gaze direction, and interaction with props."
+      },
+      "wardrobe": {
+        "id": "wardrobe",
+        "label": "Wardrobe",
+        "instruction": "Describe clothing, accessories, materials, color accents, and practical design logic."
+      },
+      "environment": {
+        "id": "environment",
+        "label": "Environment",
+        "instruction": "Describe the background or context that supports the character without stealing focus."
+      },
+      "style": {
+        "id": "style",
+        "label": "Style",
+        "instruction": "Specify rendering style, genre, lighting approach, and finish."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State requirements for coherent anatomy, hands, facial symmetry, readable costume, and clean rendering."
+      }
+    },
+    "assembly_formula": "character design, {identity}, {appearance}, {pose}, {wardrobe}, {environment}, {style}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Focus on a coherent character concept with readable design, personality, pose, and production-ready visual detail."
+  },
+  {
+    "id": "scenes_environment",
+    "name": "Scenes / Environment",
+    "description": "Environment prompts for landscapes, interiors, worldbuilding, establishing shots, and mood studies.",
+    "origin": "built_in",
+    "block_order": ["location", "time_weather", "composition", "architecture_nature", "atmosphere", "details", "constraints"],
+    "blocks": {
+      "location": {
+        "id": "location",
+        "label": "Location",
+        "instruction": "Describe the place, scale, geography, purpose, and main environmental focal point."
+      },
+      "time_weather": {
+        "id": "time_weather",
+        "label": "Time / Weather",
+        "instruction": "Specify time of day, season, weather, visibility, and natural light conditions."
+      },
+      "composition": {
+        "id": "composition",
+        "label": "Composition",
+        "instruction": "Define viewpoint, foreground, midground, background, leading lines, and sense of depth."
+      },
+      "architecture_nature": {
+        "id": "architecture_nature",
+        "label": "Architecture / Nature",
+        "instruction": "Describe structures, terrain, vegetation, water, roads, objects, or environmental systems."
+      },
+      "atmosphere": {
+        "id": "atmosphere",
+        "label": "Atmosphere",
+        "instruction": "Describe mood, color, haze, movement, sound-implied cues, and emotional temperature."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Add small environmental marks, material textures, inhabitants, signs of use, and scale cues."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State requirements for believable perspective, coherent geography, and no distracting artifacts."
+      }
+    },
+    "assembly_formula": "environment scene, {location}, {time_weather}, {composition}, {architecture_nature}, {atmosphere}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Build a spatially coherent environment prompt with strong depth, atmosphere, and readable worldbuilding."
+  },
+  {
+    "id": "text_in_image",
+    "name": "Text In Image",
+    "description": "Graphic layouts with readable in-image text for posters, ads, covers, and social visuals.",
+    "origin": "built_in",
+    "block_order": ["headline", "subheadline", "cta", "layout", "style", "details", "constraints"],
+    "blocks": {
+      "headline": {
+        "id": "headline",
+        "label": "Headline",
+        "instruction": "Write the exact main on-image headline text; keep it short, readable, and intentional."
+      },
+      "subheadline": {
+        "id": "subheadline",
+        "label": "Subheadline",
+        "instruction": "Write the exact supporting on-image text with fewer than 12 words unless the user asks otherwise."
+      },
+      "cta": {
+        "id": "cta",
+        "label": "CTA",
+        "instruction": "Write the exact call-to-action text as a compact button, label, sticker, or footer phrase."
+      },
+      "layout": {
+        "id": "layout",
+        "label": "Layout",
+        "instruction": "Describe text placement, image placement, hierarchy, alignment, spacing, and safe margins."
+      },
+      "style": {
+        "id": "style",
+        "label": "Style",
+        "instruction": "Describe visual style, typography direction, brand tone, palette, and graphic treatment."
+      },
+      "details": {
+        "id": "details",
+        "label": "Details",
+        "instruction": "Describe clarity, legibility, render quality, contrast, texture, and production finish."
+      },
+      "constraints": {
+        "id": "constraints",
+        "label": "Constraints",
+        "instruction": "State strict requirements such as exact spelling, no extra letters, no watermark, clean typography, and readable text."
+      }
+    },
+    "assembly_formula": "text-in-image design, {headline}, {subheadline}, {cta}, {layout}, {style}, {details}, {constraints}",
+    "template_system_prompt": "Return only valid JSON for the requested blocks. Keep all on-image text exact, concise, readable, and aligned with the specified layout; do not add unrequested words."
+  }
+]
