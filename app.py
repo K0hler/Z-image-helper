@@ -13,9 +13,10 @@ from zprompt_helper.storage.paths import ProjectPaths
 from zprompt_helper.storage.settings_store import SettingsStore
 from zprompt_helper.storage.template_store import TemplateStore
 from zprompt_helper.templates.builtin import load_builtin_templates
-from zprompt_helper.ui.history_panel import render_history_panel
+from zprompt_helper.ui.page_frame import render_page_shell
 from zprompt_helper.ui.settings_page import render_settings_page
 from zprompt_helper.ui.template_manager import render_template_manager
+from zprompt_helper.ui.theme import apply_theme
 from zprompt_helper.ui.workbench import render_workbench
 
 
@@ -23,6 +24,7 @@ def main() -> None:
     import streamlit as st
 
     st.set_page_config(page_title="Z-Prompt-Helper", layout="wide")
+    apply_theme()
     paths = ProjectPaths.from_root(ROOT)
     settings_service = SettingsService(SettingsStore(paths), KeyringSecretStore())
     history_store = HistoryStore(paths)
@@ -30,9 +32,9 @@ def main() -> None:
     built_in_templates = load_builtin_templates()
     template_store = TemplateStore(paths)
     custom_templates = template_store.load_all()
-    page = st.sidebar.radio("Раздел", options=["Workbench", "Template Manager", "Settings"])
+    page = render_page_shell(st.session_state.get("active_page"))
 
-    if page == "Workbench":
+    if page == "workbench":
         templates = [*built_in_templates, *custom_templates]
         render_workbench(
             {
@@ -40,11 +42,11 @@ def main() -> None:
                 "settings_service": settings_service,
                 "generation_factory": lambda api_key: GenerationService(OpenRouterClient(api_key)),
                 "history_store": history_store,
+                "history_entries": history_entries,
                 "paths": paths,
             }
         )
-        render_history_panel(history_entries, history_store)
-    elif page == "Template Manager":
+    elif page == "template_manager":
         render_template_manager(custom_templates, built_in_templates, template_store)
     else:
         settings_vm = asdict(settings_service.load())
