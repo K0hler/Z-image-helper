@@ -30,6 +30,9 @@ def _generate(service: GenerationService, model: str = "openai/gpt-4o-mini") -> 
         },
         current_values={"subject": "old robot"},
         locked_blocks={"style"},
+        regenerate_unlocked=False,
+        variation_index=0,
+        avoid_values={},
     )
 
 
@@ -82,6 +85,10 @@ def test_generation_service_sends_json_schema_request() -> None:
         },
         "current_values": {"subject": "old robot"},
         "locked_blocks": ["style"],
+        "regenerate_unlocked": False,
+        "variation_index": 0,
+        "avoid_values": {},
+        "regeneration_rules": "",
         "retry": False,
     }
     assert payload["response_format"] == {
@@ -307,3 +314,52 @@ def test_permanently_non_string_block_values_raise_generation_response_error() -
         _generate(service)
 
     assert calls == 2
+
+
+def test_regenerate_payload_includes_variation_controls() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {"subject": "new robot", "style": "cinematic"}
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    result = service.generate_blocks(
+        model="openai/gpt-4o-mini",
+        temperature=0.2,
+        top_p=0.9,
+        max_tokens=700,
+        short_idea="robot portrait",
+        active_blocks=["subject", "style"],
+        template_prompt="Template-specific rules",
+        block_instructions={
+            "subject": "Describe the subject",
+            "style": "Describe the visual style",
+        },
+        current_values={"subject": "old robot", "style": "cinematic"},
+        locked_blocks={"style"},
+        regenerate_unlocked=True,
+        variation_index=3,
+        avoid_values={"subject": "old robot"},
+    )
+
+    assert result == {"subject": "new robot", "style": "cinematic"}
+    user_payload = json.loads(captured["payload"]["messages"][2]["content"])
+    assert user_payload["regenerate_unlocked"] is True
+    assert user_payload["variation_index"] == 3
+    assert user_payload["avoid_values"] == {"subject": "old robot"}
+    assert "materially different alternative" in user_payload["regeneration_rules"]

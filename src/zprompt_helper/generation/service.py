@@ -26,6 +26,9 @@ class GenerationService:
         block_instructions: dict[str, str],
         current_values: dict[str, str],
         locked_blocks: set[str],
+        regenerate_unlocked: bool = False,
+        variation_index: int = 0,
+        avoid_values: dict[str, str] | None = None,
     ) -> dict[str, str]:
         include_schema = True
         validation_retry = False
@@ -42,6 +45,9 @@ class GenerationService:
                 block_instructions=block_instructions,
                 current_values=current_values,
                 locked_blocks=locked_blocks,
+                regenerate_unlocked=regenerate_unlocked,
+                variation_index=variation_index,
+                avoid_values=avoid_values or {},
                 include_schema=include_schema,
                 retry=validation_retry,
             )
@@ -78,6 +84,9 @@ class GenerationService:
         block_instructions: dict[str, str],
         current_values: dict[str, str],
         locked_blocks: set[str],
+        regenerate_unlocked: bool,
+        variation_index: int,
+        avoid_values: dict[str, str],
         include_schema: bool,
         retry: bool,
     ) -> dict:
@@ -96,6 +105,9 @@ class GenerationService:
                         block_instructions=block_instructions,
                         current_values=current_values,
                         locked_blocks=locked_blocks,
+                        regenerate_unlocked=regenerate_unlocked,
+                        variation_index=variation_index,
+                        avoid_values=avoid_values,
                         retry=retry,
                     ),
                 },
@@ -117,6 +129,9 @@ class GenerationService:
         block_instructions: dict[str, str],
         current_values: dict[str, str],
         locked_blocks: set[str],
+        regenerate_unlocked: bool,
+        variation_index: int,
+        avoid_values: dict[str, str],
         retry: bool,
     ) -> str:
         return json.dumps(
@@ -126,6 +141,15 @@ class GenerationService:
                 "block_instructions": block_instructions,
                 "current_values": current_values,
                 "locked_blocks": sorted(locked_blocks),
+                "regenerate_unlocked": regenerate_unlocked,
+                "variation_index": variation_index,
+                "avoid_values": avoid_values,
+                "regeneration_rules": (
+                    "For every unlocked block listed in avoid_values, return a materially different "
+                    "alternative and do not repeat the same wording."
+                    if regenerate_unlocked
+                    else ""
+                ),
                 "retry": retry,
             },
             ensure_ascii=False,
