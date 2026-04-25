@@ -36,6 +36,7 @@ def test_settings_service_loads_defaults_when_settings_file_is_absent(tmp_path) 
     assert settings.top_p == 0.9
     assert settings.max_tokens == 700
     assert settings.api_key == "sk-existing"
+    assert settings.theme_mode == "light"
 
 
 def test_settings_service_blank_api_key_does_not_overwrite_existing_secret(tmp_path) -> None:
@@ -51,3 +52,21 @@ def test_settings_service_blank_api_key_does_not_overwrite_existing_secret(tmp_p
     )
 
     assert service.load().api_key == "sk-existing"
+
+
+def test_settings_service_persists_theme_mode_in_settings_json(tmp_path) -> None:
+    service = SettingsService(
+        SettingsStore(ProjectPaths.from_root(tmp_path)),
+        InMemorySecretStore(),
+    )
+
+    service.save(
+        model="openrouter/auto",
+        temperature=0.3,
+        top_p=0.7,
+        max_tokens=800,
+        api_key="",
+        theme_mode="dark",
+    )
+
+    assert service.load().theme_mode == "dark"

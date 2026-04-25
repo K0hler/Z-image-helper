@@ -4,6 +4,16 @@ Local Streamlit workbench for building structured English prompts for Z-Image Tu
 
 The app provides built-in prompt templates, editable custom templates, OpenRouter-backed block generation, prompt history, and OS-backed API key storage through `keyring`.
 
+## UI Overview
+
+The redesigned app uses a shared page shell with three sections:
+
+- `Workbench` is now a two-column studio with native block editors on the left and prompt output, actions, and history on the right.
+- `Template Manager` separates the built-in catalog from custom-template editing so cloning and maintenance no longer compete in one long widget stack.
+- `Settings` groups API access, model defaults, and advanced generation controls into clearer surfaces and a single save form.
+
+The visual system is intentionally light and editorial: warm neutral surfaces, copper accenting, `Manrope` for UI text, and `IBM Plex Mono` for prompt/code areas.
+
 ## Requirements
 
 - Python 3.12 or newer
@@ -38,6 +48,12 @@ Open the local Streamlit URL shown in the terminal, usually `http://localhost:85
 3. Open **Workbench**, select a template, enter a short idea, edit or lock blocks, and generate a prompt.
 4. Review the final prompt and history entries.
 5. Open **Template Manager** to copy built-in templates and edit custom templates.
+
+## Verification Notes
+
+- Targeted UI regression coverage lives under `tests/ui/`.
+- The redesigned shell and layout helpers are covered by `tests/ui/test_theme.py`, `tests/ui/test_shadcn.py`, `tests/ui/test_page_frame.py`, and `tests/ui/test_workbench_layout.py`.
+- Manual smoke verification should confirm section switching, two-column workbench layout, history visibility inside the workbench, grouped settings, and template catalog/edit flows.
 
 ## Data Storage
 

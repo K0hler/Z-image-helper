@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 from zprompt_helper.storage.paths import ProjectPaths
@@ -8,6 +10,7 @@ class SettingsPayload(BaseModel):
     temperature: float = 0.2
     top_p: float = 0.9
     max_tokens: int = 700
+    theme_mode: Literal["light", "dark"] = "light"
 
 
 class SettingsStore:
