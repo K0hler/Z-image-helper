@@ -8,10 +8,12 @@ Use this checklist after installing dependencies in a fresh virtual environment.
 - [ ] Run `python -m pip install -r requirements.txt`.
 - [ ] Run `python -m pytest -v` and confirm all tests pass.
 - [ ] Start the app with `streamlit run app.py`.
+- [ ] Confirm the new page shell renders above the page body and section switching works for `Workbench`, `Template Manager`, and `Settings`.
 
 ## Settings
 
 - [ ] Open the **Settings** page.
+- [ ] Confirm the page is grouped into `API Access`, `Model Defaults`, and `Advanced Generation`.
 - [ ] Enter an OpenRouter API key and save settings.
 - [ ] Confirm `data/settings.json` does not contain the API key.
 - [ ] Use **Проверить ключ** and confirm the app reports a successful connection.
@@ -21,6 +23,7 @@ Use this checklist after installing dependencies in a fresh virtual environment.
 ## Workbench
 
 - [ ] Open **Workbench**.
+- [ ] Confirm the page reads as two coordinated surfaces rather than one long vertical stack.
 - [ ] Select each built-in template and confirm block editors render.
 - [ ] Enter a short idea and generate blocks.
 - [ ] Lock one block, regenerate, and confirm the locked value is preserved.
@@ -28,10 +31,12 @@ Use this checklist after installing dependencies in a fresh virtual environment.
 - [ ] Confirm empty block values do not leave duplicate comma separators.
 - [ ] Copy or prepare the final prompt from the UI.
 - [ ] Confirm generated or rebuilt prompts are appended to history.
+- [ ] Confirm prompt history is visible from the right-side workbench surface without scrolling below the editor.
 
 ## Template Manager
 
 - [ ] Open **Template Manager**.
+- [ ] Confirm built-in templates render as a catalog rather than a single long action list.
 - [ ] Create a copy of a built-in template.
 - [ ] Confirm a custom template file appears under `data/templates/`.
 - [ ] Edit a custom template name, system prompt, and formula.
@@ -41,6 +46,7 @@ Use this checklist after installing dependencies in a fresh virtual environment.
 ## History
 
 - [ ] Confirm history entries are shown latest first.
+- [ ] Confirm each history entry shows saved metadata before the prompt body.
 - [ ] Delete one history entry and confirm it disappears after rerun.
 - [ ] Clear history and confirm history files are removed.
 - [ ] Import or manually add a history entry with a naive timestamp and confirm sorting still works.

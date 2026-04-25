@@ -1,24 +1,40 @@
-from typing import Any
+from dataclasses import dataclass
+from typing import Literal
 
 from zprompt_helper.ui.shadcn import normalize_nav_items
+from zprompt_helper.ui.theme import normalize_theme_mode
 
 
-PAGE_SPECS = {
-    "workbench": {
-        "label": "Workbench",
-        "eyebrow": "Prompt studio",
-        "description": "Shape, lock, and regenerate prompt blocks without losing stable session flow.",
-    },
-    "template_manager": {
-        "label": "Template Manager",
-        "eyebrow": "Template catalog",
-        "description": "Browse built-in structures, clone them, and maintain local custom templates.",
-    },
-    "settings": {
-        "label": "Settings",
-        "eyebrow": "OpenRouter and app defaults",
-        "description": "Store the API key safely and tune default generation behavior for the workbench.",
-    },
+@dataclass(frozen=True)
+class PageSpec:
+    label: str
+    eyebrow: str
+    summary: str
+
+
+@dataclass(frozen=True)
+class PageShellState:
+    page_id: str
+    theme_mode: Literal["light", "dark"]
+    spec: PageSpec
+
+
+PAGE_SPECS: dict[str, PageSpec] = {
+    "workbench": PageSpec(
+        label="Workbench",
+        eyebrow="Prompt Studio",
+        summary="Build, regenerate, and polish prompts without leaving the editor flow.",
+    ),
+    "template_manager": PageSpec(
+        label="Template Manager",
+        eyebrow="Template Catalog",
+        summary="Browse built-ins and manage your local custom prompt templates.",
+    ),
+    "settings": PageSpec(
+        label="Settings",
+        eyebrow="OpenRouter And App Defaults",
+        summary="Control model defaults, generation settings, and API access.",
+    ),
 }
 
 
@@ -28,64 +44,70 @@ def normalize_page_id(page_id: str | None) -> str:
     return "workbench"
 
 
-def render_page_shell(active_page: str | None) -> str:
-    import streamlit as st
-
-    normalized = normalize_page_id(active_page or st.session_state.get("active_page"))
-    st.session_state["active_page"] = normalized
-    spec = PAGE_SPECS[normalized]
-    nav_items = normalize_nav_items(
-        [{"id": page_id, "label": item["label"]} for page_id, item in PAGE_SPECS.items()]
+def build_page_shell_state(
+    page_id: str | None,
+    theme_mode: str | None,
+) -> PageShellState:
+    normalized_page = normalize_page_id(page_id)
+    normalized_theme = normalize_theme_mode(theme_mode)
+    return PageShellState(
+        page_id=normalized_page,
+        theme_mode=normalized_theme,
+        spec=PAGE_SPECS[normalized_page],
     )
 
-    with st.container(border=True, key="zp-page-shell"):
+
+def page_nav_items() -> list[dict[str, str]]:
+    return normalize_nav_items(
+        {"id": page_id, "label": spec.label} for page_id, spec in PAGE_SPECS.items()
+    )
+
+
+def render_page_shell(
+    active_page: str | None,
+    theme_mode: str | None,
+    settings_service=None,
+) -> tuple[str, Literal["light", "dark"]]:
+    import streamlit as st
+
+    initial_state = build_page_shell_state(active_page, theme_mode)
+    nav_items = page_nav_items()
+    page_options = [item["id"] for item in nav_items]
+    page_labels = {item["id"]: item["label"] for item in nav_items}
+
+    with st.container():
+        selected_page = st.radio(
+            "Page",
+            options=page_options,
+            index=page_options.index(initial_state.page_id),
+            format_func=lambda page_id: page_labels[page_id],
+            key="active_page_radio",
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+        selected_theme = st.radio(
+            "Theme",
+            options=["light", "dark"],
+            index=["light", "dark"].index(initial_state.theme_mode),
+            format_func=lambda value: "Light" if value == "light" else "Dark",
+            key="theme_mode_radio",
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+        current_state = build_page_shell_state(selected_page, selected_theme)
+        st.session_state["active_page"] = current_state.page_id
+        st.session_state["theme_mode"] = current_state.theme_mode
+        if settings_service is not None and current_state.theme_mode != initial_state.theme_mode:
+            settings_service.save_theme_mode(current_state.theme_mode)
         st.markdown(
-            "\n".join(
-                [
-                    '<div class="zp-shell">',
-                    f'<div class="zp-shell__eyebrow">{spec["eyebrow"]}</div>',
-                    f'<div class="zp-shell__title">{spec["label"]}</div>',
-                    f'<div class="zp-shell__lede">{spec["description"]}</div>',
-                    "</div>",
-                ]
+            (
+                '<section class="zp-page-shell">'
+                f'<p class="zp-page-shell__eyebrow">{current_state.spec.eyebrow}</p>'
+                f'<h1 class="zp-page-shell__title">{current_state.spec.label}</h1>'
+                f'<p class="zp-page-shell__summary">{current_state.spec.summary}</p>'
+                "</section>"
             ),
             unsafe_allow_html=True,
         )
 
-        labels = [item["label"] for item in nav_items]
-        page_by_label = {item["label"]: item["id"] for item in nav_items}
-        selector = _select_page(st, labels, spec["label"])
-        normalized = normalize_page_id(page_by_label.get(selector))
-        st.session_state["active_page"] = normalized
-
-    return normalized
-
-
-def _select_page(st_module: Any, labels: list[str], current_label: str) -> str:
-    segmented_control = getattr(st_module, "segmented_control", None)
-    if callable(segmented_control):
-        return str(
-            segmented_control(
-                "Section",
-                options=labels,
-                default=current_label,
-                key="active_page_control",
-            )
-        )
-
-    radio = getattr(st_module, "radio", None)
-    if callable(radio):
-        try:
-            return str(
-                radio(
-                    "Section",
-                    options=labels,
-                    key="active_page_control",
-                    horizontal=True,
-                    label_visibility="collapsed",
-                )
-            )
-        except TypeError:
-            return str(radio("Section", options=labels, key="active_page_control"))
-
-    return current_label
+    return current_state.page_id, current_state.theme_mode

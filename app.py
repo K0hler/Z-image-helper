@@ -13,7 +13,7 @@ from zprompt_helper.storage.paths import ProjectPaths
 from zprompt_helper.storage.settings_store import SettingsStore
 from zprompt_helper.storage.template_store import TemplateStore
 from zprompt_helper.templates.builtin import load_builtin_templates
-from zprompt_helper.ui.page_frame import render_page_shell
+from zprompt_helper.ui.page_frame import normalize_page_id, render_page_shell
 from zprompt_helper.ui.settings_page import render_settings_page
 from zprompt_helper.ui.template_manager import render_template_manager
 from zprompt_helper.ui.theme import apply_theme
@@ -24,15 +24,21 @@ def main() -> None:
     import streamlit as st
 
     st.set_page_config(page_title="Z-Prompt-Helper", layout="wide")
-    apply_theme()
     paths = ProjectPaths.from_root(ROOT)
     settings_service = SettingsService(SettingsStore(paths), KeyringSecretStore())
+    settings_vm = asdict(settings_service.load())
+    st.session_state.setdefault("theme_mode", settings_vm.get("theme_mode", "light"))
+    page, theme_mode = render_page_shell(
+        normalize_page_id(st.session_state.get("active_page")),
+        st.session_state.get("theme_mode"),
+        settings_service=settings_service,
+    )
+    apply_theme(theme_mode)
     history_store = HistoryStore(paths)
     history_entries = history_store.export_all()
     built_in_templates = load_builtin_templates()
     template_store = TemplateStore(paths)
     custom_templates = template_store.load_all()
-    page = render_page_shell(st.session_state.get("active_page"))
 
     if page == "workbench":
         templates = [*built_in_templates, *custom_templates]

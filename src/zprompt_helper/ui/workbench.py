@@ -1,8 +1,15 @@
 import subprocess
 import sys
+from contextlib import nullcontext
 from typing import Any
 
 from zprompt_helper.domain.models import TemplateDefinition
+from zprompt_helper.ui.workbench_panels import (
+    build_workbench_summary,
+    render_workbench_editor_panel,
+    render_workbench_header_panel,
+    render_workbench_output_panel,
+)
 from zprompt_helper.workbench.session import (
     EditorSession,
     activate_template,
@@ -175,6 +182,7 @@ def render_workbench(view_model: dict) -> None:
     generation_service = view_model.get("generation_service")
     generation_factory = view_model.get("generation_factory")
     history_store = view_model.get("history_store")
+    history_entries = view_model.get("history_entries", [])
     session = view_model.get("session") or st.session_state.get("workbench_session")
     if session is None:
         session = EditorSession()
@@ -183,7 +191,7 @@ def render_workbench(view_model: dict) -> None:
     st.title("Z-Prompt-Helper")
     notice = pop_workbench_notice(st)
     if notice:
-        st.success(notice)
+        _notify_success(st, notice)
     if not templates:
         template_names = view_model.get("template_names", [])
         if template_names:
@@ -192,54 +200,58 @@ def render_workbench(view_model: dict) -> None:
         return
 
     template_by_name = {template.name: template for template in templates}
-    selected_name = st.selectbox(
-        "Шаблон",
-        options=list(template_by_name),
-        key="selected_template_id",
+    selected_name = st.session_state.get("selected_template_id", next(iter(template_by_name)))
+    template = template_by_name.get(selected_name, next(iter(template_by_name.values())))
+    activate_template(session, template.id)
+    apply_pending_workbench_widget_state(st)
+    active_blocks = [
+        block_id
+        for block_id in template.block_order
+        if template.blocks[block_id].enabled
+    ]
+    summary = build_workbench_summary(session, active_block_count=len(active_blocks))
+    selected_name = render_workbench_header_panel(
+        st,
+        template_names=list(template_by_name),
+        selected_name=template.name,
+        summary=summary,
+        short_idea=session.short_idea,
     )
     template = template_by_name[selected_name]
     activate_template(session, template.id)
     apply_pending_workbench_widget_state(st)
-
-    session.short_idea = st.text_area(
-        "Кратко о том, что хотите создать",
-        value=session.short_idea,
-        key="short_idea",
-        height=100,
-    )
-
-    for block_id in template.block_order:
-        block = template.blocks[block_id]
-        if not block.enabled:
-            continue
-        session.block_values[block_id] = st.text_area(
-            block.label,
-            value=session.block_values.get(block_id, ""),
-            key=f"block-{template.id}-{block_id}",
-        )
-        locked = st.checkbox(
-            "Зафиксировать блок",
-            value=block_id in session.locked_blocks,
-            key=f"lock-{template.id}-{block_id}",
-        )
-        if locked:
-            session.locked_blocks.add(block_id)
-        else:
-            session.locked_blocks.discard(block_id)
 
     if current_template_has_meaningful_draft(session):
         st.caption("Черновик этого шаблона сохраняется автоматически.")
     else:
         st.caption("Новый черновик шаблона. Заполните поля или сгенерируйте промт.")
 
-    col1, col2, col3 = st.columns(3)
-    generate = col1.button("Сгенерировать", key="generate")
-    regenerate = col2.button("Перегенерировать незаблокированные", key="regenerate_unlocked")
-    rebuild = col3.button("Пересобрать промт", key="rebuild_prompt")
-    col4, col5, col6 = st.columns(3)
-    clear_unlocked = col4.button("Очистить незаблокированные", key="clear_unlocked")
-    lock_all = col5.button("Заблокировать все блоки", key="lock_all")
-    unlock_all = col6.button("Разблокировать все блоки", key="unlock_all")
+    left_col, right_col = _columns(st, [1.45, 1.0])
+    with _column_scope(left_col):
+        render_workbench_editor_panel(
+            st,
+            template=template,
+            session=session,
+        )
+    summary = build_workbench_summary(session, active_block_count=len(active_blocks))
+    with _column_scope(right_col):
+        render_workbench_output_panel(
+            st,
+            session=session,
+            template=template,
+            summary=summary,
+            history_entries=history_entries,
+            history_store=history_store,
+        )
+
+    actions = st.session_state.get("_workbench_actions", {})
+    generate = bool(actions.get("generate"))
+    regenerate = bool(actions.get("regenerate"))
+    rebuild = bool(actions.get("rebuild"))
+    clear_unlocked = bool(actions.get("clear_unlocked"))
+    lock_all = bool(actions.get("lock_all"))
+    unlock_all = bool(actions.get("unlock_all"))
+    copy_prompt = bool(actions.get("copy_prompt"))
 
     if generate or regenerate:
         try:
@@ -259,13 +271,14 @@ def render_workbench(view_model: dict) -> None:
                 regenerate_unlocked=regenerate,
                 variation_index=session.variation_index,
             )
-            generated = service.generate_blocks(
-                model=_setting(settings, "model", ""),
-                temperature=float(_setting(settings, "temperature", 0.2)),
-                top_p=float(_setting(settings, "top_p", 0.9)),
-                max_tokens=int(_setting(settings, "max_tokens", 700)),
-                **request,
-            )
+            with _spinner(st, "Generating prompt..."):
+                generated = service.generate_blocks(
+                    model=_setting(settings, "model", ""),
+                    temperature=float(_setting(settings, "temperature", 0.2)),
+                    top_p=float(_setting(settings, "top_p", 0.9)),
+                    max_tokens=int(_setting(settings, "max_tokens", 700)),
+                    **request,
+                )
             apply_generated_result(
                 session=session,
                 generated_blocks=generated,
@@ -336,17 +349,9 @@ def render_workbench(view_model: dict) -> None:
         rerun_workbench(st)
         return
 
-    session.final_prompt = st.text_area(
-        "Финальный промт",
-        value=session.final_prompt,
-        key=f"final-prompt-{template.id}",
-        height=160,
-    )
-    if session.final_prompt:
-        st.code(session.final_prompt)
-    if st.button("Скопировать промт", key="copy_prompt"):
+    if copy_prompt:
         if copy_text_to_clipboard(session.final_prompt):
-            st.success("Промт скопирован в буфер обмена.")
+            _notify_success(st, "Промт скопирован в буфер обмена.")
         else:
             st.error("Не удалось скопировать промт в буфер обмена.")
 
@@ -364,3 +369,32 @@ def _setting(settings: Any, name: str, default: Any) -> Any:
     if isinstance(settings, dict):
         return settings.get(name, default)
     return getattr(settings, name, default)
+
+
+def _columns(st_module: Any, spec: list[float]) -> list[Any]:
+    columns_fn = getattr(st_module, "columns")
+    try:
+        return list(columns_fn(spec, gap="large"))
+    except TypeError:
+        return list(columns_fn(len(spec)))
+
+
+def _spinner(st_module: Any, message: str):
+    spinner = getattr(st_module, "spinner", None)
+    if callable(spinner):
+        return spinner(message)
+    return nullcontext()
+
+
+def _notify_success(st_module: Any, message: str) -> None:
+    toast = getattr(st_module, "toast", None)
+    if callable(toast):
+        toast(message, icon=":material/check_circle:")
+        return
+    st_module.success(message)
+
+
+def _column_scope(column: Any):
+    if hasattr(column, "__enter__") and hasattr(column, "__exit__"):
+        return column
+    return nullcontext()

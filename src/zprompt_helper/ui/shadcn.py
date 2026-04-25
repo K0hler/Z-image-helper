@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from contextlib import nullcontext
 from typing import Any
 
@@ -11,8 +11,19 @@ def shadcn_available() -> bool:
     return True
 
 
-def normalize_nav_items(items: Sequence[dict[str, str]]) -> list[dict[str, str]]:
-    return [{"id": str(item["id"]), "label": str(item["label"])} for item in items]
+def normalize_nav_items(items: Iterable[dict[str, object]]) -> list[dict[str, str]]:
+    normalized: list[dict[str, str]] = []
+    seen_ids: set[str] = set()
+
+    for item in items:
+        item_id = str(item["id"]).strip()
+        label = str(item["label"]).strip()
+        if not item_id or not label or item_id in seen_ids:
+            continue
+        normalized.append({"id": item_id, "label": label})
+        seen_ids.add(item_id)
+
+    return normalized
 
 
 def section_card(st_module: Any, *, title: str | None = None, description: str | None = None):
@@ -32,8 +43,11 @@ def badge(st_module: Any, label: str, *, color: str = "gray", icon: str | None =
             kwargs["icon"] = icon
         badge_fn(label, **kwargs)
         return
-    icon_prefix = f"{icon} " if icon else ""
-    getattr(st_module, "caption", lambda *_args, **_kwargs: None)(f"{icon_prefix}{label}")
+    write_fn = getattr(st_module, "write", None)
+    if callable(write_fn):
+        icon_prefix = f"{icon} " if icon else ""
+        write_fn(f"{icon_prefix}{label}")
+    return
 
 
 def render_tabs(st_module: Any, labels: Sequence[str]) -> list[Any]:
@@ -46,5 +60,8 @@ def render_tabs(st_module: Any, labels: Sequence[str]) -> list[Any]:
 def _safe_container(st_module: Any, **kwargs: object):
     container_fn = getattr(st_module, "container", None)
     if callable(container_fn):
-        return container_fn(**kwargs)
+        try:
+            return container_fn(**kwargs)
+        except TypeError:
+            return container_fn()
     return nullcontext()
