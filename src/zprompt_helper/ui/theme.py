@@ -186,11 +186,8 @@ code, pre, textarea {{
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"],
-[data-testid="stTextArea"] [data-baseweb="textarea"] > div,
 [data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"] > div,
 [data-testid="stNumberInput"] [data-baseweb="base-input"],
-[data-testid="stNumberInput"] [data-baseweb="base-input"] > div,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div,
 [data-testid="stCodeBlock"] pre,
 [data-testid="stCode"] {{
@@ -199,6 +196,15 @@ code, pre, textarea {{
   background-image: none !important;
   color: var(--zp-ink) !important;
   border: 1px solid {input_border} !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}}
+[data-testid="stTextArea"] [data-baseweb="textarea"] > div,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"] > div,
+[data-testid="stNumberInput"] [data-baseweb="base-input"] > div {{
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
   box-shadow: none !important;
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"],
@@ -228,11 +234,8 @@ code, pre, textarea {{
   background-color: transparent !important;
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"]:hover,
-[data-testid="stTextArea"] [data-baseweb="textarea"]:hover > div,
 [data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:hover,
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:hover > div,
 [data-testid="stNumberInput"] [data-baseweb="base-input"]:hover,
-[data-testid="stNumberInput"] [data-baseweb="base-input"]:hover > div,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
 [data-baseweb="base-input"]:hover,
 [data-baseweb="textarea"]:hover {{
@@ -242,11 +245,8 @@ code, pre, textarea {{
   border-color: {input_border_hover} !important;
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within,
-[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within > div,
 [data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:focus-within,
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:focus-within > div,
 [data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within,
-[data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within > div,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
 [data-baseweb="base-input"]:focus-within,
 [data-baseweb="textarea"]:focus-within {{
@@ -259,8 +259,8 @@ code, pre, textarea {{
 [data-testid="stTextArea"] textarea,
 [data-testid="stTextInputRootElement"] input,
 [data-testid="stNumberInput"] input {{
-  background: {input_bg} !important;
-  background-color: {input_bg} !important;
+  background: transparent !important;
+  background-color: transparent !important;
   background-image: none !important;
   color: var(--zp-ink) !important;
   border: 0 !important;
@@ -274,8 +274,8 @@ code, pre, textarea {{
 [data-testid="stTextInputRootElement"] input:focus-visible,
 [data-testid="stNumberInput"] input:focus,
 [data-testid="stNumberInput"] input:focus-visible {{
-  background: {input_bg_active} !important;
-  background-color: {input_bg_active} !important;
+  background: transparent !important;
+  background-color: transparent !important;
   outline: none !important;
   box-shadow: none !important;
 }}
@@ -296,61 +296,76 @@ code, pre, textarea {{
   border-color: var(--zp-accent) !important;
 }}
 [data-baseweb="popover"] {{
+  border-radius: 18px !important;
+  overflow: clip !important;
+  border: 1px solid {input_border} !important;
   background: {input_bg} !important;
   background-color: {input_bg} !important;
-  border-radius: 18px !important;
-  box-shadow: none !important;
-  outline: none !important;
-  overflow: hidden !important;
-  border: 0 !important;
+  box-shadow: 0 20px 40px {panel_shadow} !important;
   padding: 0 !important;
+  outline: none !important;
 }}
 [data-baseweb="popover"] > div {{
   background: transparent !important;
+  background-color: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  overflow: hidden !important;
   padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
 }}
-[data-baseweb="popover"] > div > div,
-[data-baseweb="popover"] [role="presentation"] {{
+[data-baseweb="popover"] > div > div {{
   background: transparent !important;
+  background-color: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   outline: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
 }}
-[data-baseweb="popover"] [role="listbox"] {{
-  background: {input_bg} !important;
-  background-color: {input_bg} !important;
+[data-baseweb="popover"] ul {{
+  background: transparent !important;
+  background-color: transparent !important;
   color: var(--zp-ink) !important;
   border: 0 !important;
-  border-radius: 18px !important;
-  box-shadow: inset 0 0 0 1px {input_border}, 0 18px 36px {panel_shadow} !important;
+  box-shadow: none !important;
   outline: none !important;
-  overflow: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  padding: 0.35rem 0 !important;
+  border-radius: 0 !important;
 }}
+[data-baseweb="popover"] ::-webkit-scrollbar {{
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent;
+}}
+[data-baseweb="popover"] li[role="option"],
 [data-baseweb="popover"] [role="option"] {{
-  background: {input_bg} !important;
-  background-color: {input_bg} !important;
+  background: transparent !important;
+  background-color: transparent !important;
   color: var(--zp-ink) !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }}
+[data-baseweb="popover"] li[role="option"]:hover,
 [data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] li[role="option"][aria-selected="true"],
 [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
   background: {input_bg_hover} !important;
   background-color: {input_bg_hover} !important;
   color: var(--zp-ink) !important;
 }}
-[data-baseweb="popover"] [role="option"] *,
-[data-baseweb="popover"] [role="listbox"] * {{
+[data-baseweb="popover"] [role="option"] * {{
   color: inherit !important;
 }}
-[data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar {{
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
+[data-baseweb="popover"] * {{
+  box-shadow: none !important;
 }}
 [data-testid="stRadio"] > div {{
   gap: 0.5rem;
@@ -501,26 +516,18 @@ div[data-testid="stRadio"] label {{
 }}
 .st-key-theme_toggle button {{
   position: relative;
-  min-width: 3.9rem;
-  width: 3.9rem;
-  height: 2.15rem;
+  min-width: 2.5rem !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
   padding: 0 !important;
-  justify-content: center;
-  background: linear-gradient(135deg, {input_bg} 0%, {input_bg_hover} 100%);
-  box-shadow: inset 0 0 0 1px var(--zp-border), 0 10px 30px {toggle_glow};
+  border-radius: 999px !important;
+  background: {input_bg} !important;
+  border: 1px solid var(--zp-border) !important;
+  box-shadow: 0 4px 14px {toggle_glow};
+  transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 180ms ease;
 }}
 .st-key-theme_toggle button::before {{
-  content: "";
-  position: absolute;
-  left: 0.32rem;
-  top: 0.28rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 999px;
-  background: {toggle_thumb};
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-  transform: translateX({toggle_translate});
-  transition: transform 220ms ease, background 220ms ease;
+  display: none;
 }}
 .st-key-theme_toggle button > div,
 .st-key-theme_toggle button p {{
@@ -534,12 +541,37 @@ div[data-testid="stRadio"] label {{
   align-items: center;
   justify-content: center;
   color: var(--zp-ink);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.15rem;
 }}
-[data-testid="stSidebar"] .st-key-theme_toggle button,
-[data-testid="stSidebar"] .st-key-theme_toggle button::after {{
-  color: var(--zp-ink);
+.st-key-theme_toggle button:hover {{
+  border-color: var(--zp-accent) !important;
+  background: {input_bg_hover} !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px {toggle_glow};
+}}
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] {{
+  align-items: stretch;
+}}
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn {{
+  display: flex;
+  flex-direction: column;
+}}
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn > div,
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stVerticalBlock"],
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stElementContainer"],
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stButton"],
+.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stButton"] > div {{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}}
+.st-key-workbench_actions_panel [data-testid="stButton"] button {{
+  min-height: 3rem;
+  height: 100%;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
 }}
 @media (max-width: 900px) {{
   .zp-meta-grid {{

@@ -374,7 +374,7 @@ def _setting(settings: Any, name: str, default: Any) -> Any:
 def _columns(st_module: Any, spec: list[float]) -> list[Any]:
     columns_fn = getattr(st_module, "columns")
     try:
-        return list(columns_fn(spec, gap="large"))
+        return list(columns_fn(spec, gap="medium"))
     except TypeError:
         return list(columns_fn(len(spec)))
 

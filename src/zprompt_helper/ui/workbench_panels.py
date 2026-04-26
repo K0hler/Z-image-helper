@@ -171,7 +171,7 @@ def render_workbench_output_panel(
 def _columns(st_module: Any, spec: list[float]) -> list[Any]:
     columns_fn = getattr(st_module, "columns")
     try:
-        return list(columns_fn(spec, gap="large"))
+        return list(columns_fn(spec, gap="small"))
     except TypeError:
         return list(columns_fn(len(spec)))
 
