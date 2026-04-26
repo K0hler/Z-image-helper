@@ -118,11 +118,6 @@ def render_settings_page(
             value=int(settings.get("max_tokens", 700)),
             key="max_tokens",
         )
-        theme_mode = st.text_input(
-            "Theme mode",
-            value=str(settings.get("theme_mode", "light")),
-            key="theme_mode",
-        )
         submitted = st.form_submit_button("Сохранить", key="settings-form")
 
     form = {
@@ -131,7 +126,7 @@ def render_settings_page(
         "top_p": top_p,
         "max_tokens": max_tokens,
         "api_key": api_key,
-        "theme_mode": theme_mode,
+        "theme_mode": str(st.session_state.get("theme_mode", settings.get("theme_mode", "light"))),
     }
     if submitted:
         if settings_service is None:

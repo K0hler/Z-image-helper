@@ -3,7 +3,7 @@ from typing import Any
 
 from zprompt_helper.domain.models import TemplateDefinition
 from zprompt_helper.ui.history_panel import render_history_panel
-from zprompt_helper.ui.shadcn import badge, render_tabs
+from zprompt_helper.ui.shadcn import render_tabs
 from zprompt_helper.workbench.session import EditorSession
 
 
@@ -38,17 +38,18 @@ def render_workbench_header_panel(
     summary: WorkbenchSummary,
     short_idea: str,
 ) -> str:
-    with _container(st_module, border=True):
+    with _container(st_module, border=True, key="workbench_header_panel"):
         _caption(st_module, "Prompt studio")
         selected_name = st_module.selectbox(
             "Шаблон",
             options=template_names,
             key="selected_template_id",
         )
-        badge(
+        _status_chip(
             st_module,
             "Saved draft" if summary.filled_count or summary.has_final_prompt else "New draft",
-            color="orange" if summary.filled_count or summary.has_final_prompt else "gray",
+            tone="accent" if summary.filled_count or summary.has_final_prompt else "muted",
+            icon="✦" if summary.filled_count or summary.has_final_prompt else "○",
         )
         _caption(st_module, f"Shared idea: {short_idea.strip() or 'Not set yet'}")
         _markdown(
@@ -73,7 +74,7 @@ def render_workbench_editor_panel(
     template: TemplateDefinition,
     session: EditorSession,
 ) -> None:
-    with _container(st_module, border=True):
+    with _container(st_module, border=True, key="workbench_editor_panel"):
         _subheader(st_module, "Block editor")
         session.short_idea = st_module.text_area(
             "Кратко о том, что хотите создать",
@@ -110,12 +111,13 @@ def render_workbench_output_panel(
     history_entries: list[dict],
     history_store: Any,
 ) -> None:
-    with _container(st_module, border=True):
+    with _container(st_module, border=True, key="workbench_output_panel"):
         _subheader(st_module, "Prompt output")
-        badge(
+        _status_chip(
             st_module,
             f"Variation {summary.variation_index}",
-            color="orange" if summary.variation_index else "gray",
+            tone="accent" if summary.variation_index else "muted",
+            icon="◌" if summary.variation_index else "—",
         )
         session.final_prompt = st_module.text_area(
             "Финальный промт",
@@ -134,7 +136,7 @@ def render_workbench_output_panel(
 
     tabs = render_tabs(st_module, ["Actions", "History"])
     with tabs[0]:
-        with _container(st_module, border=True):
+        with _container(st_module, border=True, key="workbench_actions_panel"):
             col1, col2, col3 = _columns(st_module, [1, 1, 1])
             generate = col1.button("Сгенерировать", key="generate")
             regenerate = col2.button("Перегенерировать незаблокированные", key="regenerate_unlocked")
@@ -206,3 +208,17 @@ def _markdown(st_module: Any, body: str, **kwargs: object) -> None:
         markdown_fn(body, **kwargs)
         return
     _caption(st_module, body)
+
+
+def _status_chip(st_module: Any, label: str, *, tone: str, icon: str) -> None:
+    safe_tone = tone if tone in {"accent", "muted"} else "muted"
+    _markdown(
+        st_module,
+        (
+            f'<div class="zp-status-chip zp-status-chip--{safe_tone}">'
+            f'<span class="zp-status-chip__icon">{icon}</span>'
+            f"<span>{label}</span>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )

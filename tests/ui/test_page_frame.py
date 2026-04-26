@@ -1,4 +1,9 @@
-from zprompt_helper.ui.page_frame import PAGE_SPECS, build_page_shell_state, normalize_page_id
+from zprompt_helper.ui.page_frame import (
+    PAGE_SPECS,
+    build_page_shell_state,
+    normalize_page_id,
+    toggle_theme_mode,
+)
 
 
 def test_normalize_page_id_defaults_to_workbench() -> None:
@@ -16,3 +21,8 @@ def test_build_page_shell_state_keeps_page_metadata_and_theme_in_sync() -> None:
     assert state.page_id == "settings"
     assert state.theme_mode == "dark"
     assert state.spec.label == "Settings"
+
+
+def test_toggle_theme_mode_flips_between_light_and_dark() -> None:
+    assert toggle_theme_mode("light") == "dark"
+    assert toggle_theme_mode("dark") == "light"

@@ -63,6 +63,12 @@ def page_nav_items() -> list[dict[str, str]]:
     )
 
 
+def toggle_theme_mode(theme_mode: str | None) -> Literal["light", "dark"]:
+    if normalize_theme_mode(theme_mode) == "dark":
+        return "light"
+    return "dark"
+
+
 def render_page_shell(
     active_page: str | None,
     theme_mode: str | None,
@@ -76,24 +82,30 @@ def render_page_shell(
     page_labels = {item["id"]: item["label"] for item in nav_items}
 
     with st.container():
-        selected_page = st.radio(
-            "Page",
-            options=page_options,
-            index=page_options.index(initial_state.page_id),
-            format_func=lambda page_id: page_labels[page_id],
-            key="active_page_radio",
-            horizontal=True,
-            label_visibility="collapsed",
-        )
-        selected_theme = st.radio(
-            "Theme",
-            options=["light", "dark"],
-            index=["light", "dark"].index(initial_state.theme_mode),
-            format_func=lambda value: "Light" if value == "light" else "Dark",
-            key="theme_mode_radio",
-            horizontal=True,
-            label_visibility="collapsed",
-        )
+        st.markdown('<div class="zp-toolbar">', unsafe_allow_html=True)
+        nav_col, theme_col = st.columns([1.0, 0.2], gap="small")
+        with nav_col:
+            st.markdown('<div class="zp-toolbar__nav">', unsafe_allow_html=True)
+            selected_page = st.radio(
+                "Page",
+                options=page_options,
+                index=page_options.index(initial_state.page_id),
+                format_func=lambda page_id: page_labels[page_id],
+                key="active_page_radio",
+                horizontal=True,
+                label_visibility="collapsed",
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+        with theme_col:
+            st.markdown('<div class="zp-toolbar__theme">', unsafe_allow_html=True)
+            toggled = st.button(
+                "Toggle theme",
+                key="theme_toggle",
+                use_container_width=True,
+            )
+            selected_theme = toggle_theme_mode(initial_state.theme_mode) if toggled else initial_state.theme_mode
+            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
         current_state = build_page_shell_state(selected_page, selected_theme)
         st.session_state["active_page"] = current_state.page_id
         st.session_state["theme_mode"] = current_state.theme_mode

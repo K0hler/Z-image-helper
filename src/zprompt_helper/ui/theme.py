@@ -65,6 +65,30 @@ def build_theme_css(
     header_bg = "rgba(16, 19, 24, 0.82)" if normalized_mode == "dark" else "rgba(245, 239, 230, 0.78)"
     shell_bg = "rgba(23, 28, 34, 0.84)" if normalized_mode == "dark" else "rgba(255, 250, 243, 0.72)"
     shadow = "rgba(0, 0, 0, 0.32)" if normalized_mode == "dark" else "rgba(32, 26, 23, 0.06)"
+    input_bg = "rgba(27, 34, 42, 0.96)" if normalized_mode == "dark" else "rgba(255, 250, 243, 0.96)"
+    input_bg_hover = "rgba(34, 42, 52, 0.98)" if normalized_mode == "dark" else "rgba(250, 242, 232, 0.98)"
+    input_bg_active = "rgba(39, 49, 61, 1)" if normalized_mode == "dark" else "rgba(255, 247, 238, 1)"
+    code_bg = "rgba(20, 25, 31, 0.94)" if normalized_mode == "dark" else "rgba(246, 237, 225, 0.92)"
+    button_text = "#f8f3ec" if normalized_mode == "dark" else "#201a17"
+    toggle_glow = "rgba(209, 138, 87, 0.32)" if normalized_mode == "dark" else "rgba(163, 91, 47, 0.18)"
+    toggle_thumb = "#f8f3ec" if normalized_mode == "dark" else "#fffaf3"
+    toggle_translate = "1.1rem" if normalized_mode == "dark" else "0"
+    toggle_icon = '"☾"' if normalized_mode == "dark" else '"☀"'
+    panel_bg = "rgba(20, 26, 33, 0.92)" if normalized_mode == "dark" else "rgba(255, 250, 243, 0.9)"
+    panel_bg_alt = "rgba(25, 31, 39, 0.96)" if normalized_mode == "dark" else "rgba(250, 243, 234, 0.95)"
+    panel_bg_editor = "rgba(18, 24, 31, 0.96)" if normalized_mode == "dark" else "rgba(255, 251, 245, 0.98)"
+    panel_bg_output = "rgba(23, 29, 36, 0.98)" if normalized_mode == "dark" else "rgba(252, 246, 238, 0.98)"
+    panel_shadow = "rgba(3, 6, 10, 0.42)" if normalized_mode == "dark" else "rgba(32, 26, 23, 0.08)"
+    border_soft = "rgba(98, 118, 138, 0.42)" if normalized_mode == "dark" else "rgba(171, 142, 118, 0.22)"
+    panel_border = "rgba(112, 134, 156, 0.46)" if normalized_mode == "dark" else "rgba(167, 139, 114, 0.26)"
+    panel_border_strong = "rgba(140, 168, 196, 0.52)" if normalized_mode == "dark" else "rgba(173, 135, 102, 0.3)"
+    input_border = "rgba(95, 111, 128, 0.42)" if normalized_mode == "dark" else "rgba(188, 163, 140, 0.38)"
+    input_border_hover = "rgba(130, 149, 170, 0.52)" if normalized_mode == "dark" else "rgba(177, 144, 116, 0.44)"
+    input_border_focus = "rgba(209, 138, 87, 0.75)" if normalized_mode == "dark" else "rgba(163, 91, 47, 0.58)"
+    muted_chip_bg = "rgba(45, 55, 66, 0.92)" if normalized_mode == "dark" else "rgba(239, 229, 216, 0.95)"
+    muted_chip_text = "#d9cfc4" if normalized_mode == "dark" else "#5d5045"
+    accent_chip_bg = "rgba(98, 62, 39, 0.92)" if normalized_mode == "dark" else "rgba(234, 211, 191, 0.95)"
+    accent_chip_text = "#ffd9bf" if normalized_mode == "dark" else "#7b4320"
 
     return f"""
 <style>
@@ -98,6 +122,9 @@ html, body, [data-testid="stAppViewContainer"] {{
 [data-testid="stHeader"] {{
   background: {header_bg};
 }}
+[data-testid="stAppViewBlockContainer"] {{
+  padding-top: 2rem;
+}}
 h1, h2, h3, h4, h5, h6 {{
   color: var(--zp-ink);
   letter-spacing: -0.02em;
@@ -108,9 +135,281 @@ p, label, [data-testid="stMarkdownContainer"] {{
 code, pre, textarea {{
   font-family: "IBM Plex Mono", monospace;
 }}
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stForm"] {{
+  border-radius: 24px;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] {{
+  border-color: transparent !important;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+  background: transparent;
+}}
+[data-testid="stForm"] {{
+  background: {panel_bg_alt};
+  border: 1px solid {panel_border};
+  box-shadow: 0 14px 30px {panel_shadow};
+}}
+.st-key-workbench_header_panel,
+.st-key-workbench_editor_panel,
+.st-key-workbench_output_panel,
+.st-key-workbench_actions_panel {{
+  border-radius: 24px;
+  border: 1px solid {panel_border};
+  box-shadow: 0 18px 38px {panel_shadow};
+}}
+.st-key-workbench_header_panel {{
+  background: {panel_bg};
+}}
+.st-key-workbench_editor_panel {{
+  background: {panel_bg_editor};
+  border-color: {panel_border_strong};
+}}
+.st-key-workbench_output_panel {{
+  background: {panel_bg_output};
+  border-color: {panel_border_strong};
+}}
+.st-key-workbench_actions_panel {{
+  background: {panel_bg};
+}}
+[data-testid="stHorizontalBlock"] .st-key-workbench_editor_panel,
+[data-testid="stHorizontalBlock"] .st-key-workbench_output_panel {{
+  position: relative;
+}}
+[data-testid="stHorizontalBlock"] .st-key-workbench_editor_panel::after,
+[data-testid="stHorizontalBlock"] .st-key-workbench_output_panel::after {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}}
+[data-testid="stTextArea"] [data-baseweb="textarea"],
+[data-testid="stTextArea"] [data-baseweb="textarea"] > div,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"] > div,
+[data-testid="stNumberInput"] [data-baseweb="base-input"],
+[data-testid="stNumberInput"] [data-baseweb="base-input"] > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stCodeBlock"] pre,
+[data-testid="stCode"] {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  background-image: none !important;
+  color: var(--zp-ink) !important;
+  border: 1px solid {input_border} !important;
+  box-shadow: none !important;
+}}
+[data-testid="stTextArea"] [data-baseweb="textarea"],
+[data-testid="stSelectbox"] [data-baseweb="select"],
+[data-testid="stNumberInput"] [data-baseweb="base-input"],
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {{
+  border-radius: 18px !important;
+}}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+  overflow: hidden !important;
+}}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div > div {{
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}}
+[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stSelectbox"] [data-baseweb="select"] *::before,
+[data-testid="stSelectbox"] [data-baseweb="select"] *::after {{
+  box-shadow: none !important;
+}}
+[data-testid="stSelectbox"] [data-baseweb="select"] [aria-hidden="true"] {{
+  border: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}}
+[data-testid="stTextArea"] [data-baseweb="textarea"]:hover,
+[data-testid="stTextArea"] [data-baseweb="textarea"]:hover > div,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:hover,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:hover > div,
+[data-testid="stNumberInput"] [data-baseweb="base-input"]:hover,
+[data-testid="stNumberInput"] [data-baseweb="base-input"]:hover > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
+[data-baseweb="base-input"]:hover,
+[data-baseweb="textarea"]:hover {{
+  background: {input_bg_hover} !important;
+  background-color: {input_bg_hover} !important;
+  background-image: none !important;
+  border-color: {input_border_hover} !important;
+}}
+[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within,
+[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within > div,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:focus-within,
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:focus-within > div,
+[data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within,
+[data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+[data-baseweb="base-input"]:focus-within,
+[data-baseweb="textarea"]:focus-within {{
+  background: {input_bg_active} !important;
+  background-color: {input_bg_active} !important;
+  background-image: none !important;
+  border-color: {input_border_focus} !important;
+  box-shadow: none !important;
+}}
+[data-testid="stTextArea"] textarea,
+[data-testid="stTextInputRootElement"] input,
+[data-testid="stNumberInput"] input {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  background-image: none !important;
+  color: var(--zp-ink) !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  caret-color: var(--zp-ink) !important;
+}}
+[data-testid="stTextArea"] textarea:focus,
+[data-testid="stTextArea"] textarea:focus-visible,
+[data-testid="stTextInputRootElement"] input:focus,
+[data-testid="stTextInputRootElement"] input:focus-visible,
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stNumberInput"] input:focus-visible {{
+  background: {input_bg_active} !important;
+  background-color: {input_bg_active} !important;
+  outline: none !important;
+  box-shadow: none !important;
+}}
+[data-testid="stTextArea"] textarea::placeholder,
+[data-testid="stTextInputRootElement"] input::placeholder {{
+  color: var(--zp-muted) !important;
+}}
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] span {{
+  color: var(--zp-ink) !important;
+}}
+[data-testid="stCheckbox"] [role="checkbox"] {{
+  border-color: var(--zp-border) !important;
+  background: {input_bg} !important;
+}}
+[data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"] {{
+  background: var(--zp-accent) !important;
+  border-color: var(--zp-accent) !important;
+}}
+[data-baseweb="popover"] {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  padding: 0 !important;
+}}
+[data-baseweb="popover"] > div {{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}}
+[data-baseweb="popover"] > div > div,
+[data-baseweb="popover"] [role="presentation"] {{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}}
+[data-baseweb="popover"] [role="listbox"] {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  color: var(--zp-ink) !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: inset 0 0 0 1px {input_border}, 0 18px 36px {panel_shadow} !important;
+  outline: none !important;
+  overflow: auto !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}}
+[data-baseweb="popover"] [role="option"] {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  color: var(--zp-ink) !important;
+}}
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+  background: {input_bg_hover} !important;
+  background-color: {input_bg_hover} !important;
+  color: var(--zp-ink) !important;
+}}
+[data-baseweb="popover"] [role="option"] *,
+[data-baseweb="popover"] [role="listbox"] * {{
+  color: inherit !important;
+}}
+[data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar {{
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}}
+[data-testid="stRadio"] > div {{
+  gap: 0.5rem;
+}}
+div[role="radiogroup"] > label {{
+  background: {input_bg};
+  border: 1px solid var(--zp-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}}
+div[role="radiogroup"] > label:hover {{
+  background: {input_bg_hover};
+  border-color: var(--zp-accent);
+  transform: translateY(-1px);
+}}
+[data-testid="stButton"] button {{
+  border-radius: 999px;
+  border: 1px solid {panel_border};
+  background: {input_bg};
+  color: var(--zp-ink);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}}
+[data-testid="stButton"] button:hover {{
+  border-color: var(--zp-accent);
+  background: {input_bg_hover};
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px {shadow};
+}}
+[data-testid="stButton"] button[kind="primary"] {{
+  background: linear-gradient(135deg, var(--zp-accent) 0%, #c4723c 100%);
+  color: {button_text};
+  border-color: transparent;
+}}
+[data-testid="stButton"] button[kind="primary"]:hover {{
+  background: linear-gradient(135deg, #b76734 0%, #d28a58 100%);
+}}
+[data-testid="stTabs"] [role="tablist"] {{
+  gap: 0.5rem;
+}}
+[data-testid="stTabs"] [role="tab"] {{
+  border-radius: 999px;
+  border: 1px solid var(--zp-border);
+  background: {input_bg};
+}}
+[data-testid="stTabs"] [aria-selected="true"] {{
+  border-color: var(--zp-accent);
+  color: var(--zp-accent);
+}}
+[data-testid="stPopover"] > div > button {{
+  background: {input_bg};
+}}
+[data-testid="stCodeBlock"] pre,
+[data-testid="stCode"] {{
+  background: {code_bg} !important;
+}}
 .zp-page-shell {{
   background: {shell_bg};
-  border: 1px solid var(--zp-border);
+  border: 1px solid {border_soft};
   border-radius: 24px;
   padding: 1.25rem 1.25rem 0.75rem;
   box-shadow: 0 24px 60px {shadow};
@@ -132,8 +431,120 @@ code, pre, textarea {{
   margin: 0.35rem 0 1rem;
   max-width: 48rem;
 }}
+.zp-toolbar {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}}
+.zp-toolbar__nav {{
+  flex: 1 1 auto;
+}}
+.zp-toolbar__theme {{
+  flex: 0 0 auto;
+}}
+.zp-status-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.32rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}}
+.zp-status-chip__icon {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  opacity: 0.9;
+}}
+.zp-status-chip--muted {{
+  background: {muted_chip_bg};
+  color: {muted_chip_text};
+  border-color: rgba(255, 255, 255, 0.05);
+}}
+.zp-status-chip--accent {{
+  background: {accent_chip_bg};
+  color: {accent_chip_text};
+  border-color: rgba(209, 138, 87, 0.22);
+}}
+.zp-meta-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}}
+.zp-meta-card {{
+  background: {panel_bg_alt};
+  border: 1px solid {panel_border};
+  border-radius: 18px;
+  padding: 0.85rem 0.95rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}}
+.zp-meta-card strong {{
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 0.2rem;
+}}
+.zp-meta-card span,
+.zp-empty {{
+  color: var(--zp-muted);
+}}
 div[data-testid="stRadio"] label {{
   font-weight: 600;
+}}
+.st-key-theme_toggle button {{
+  position: relative;
+  min-width: 3.9rem;
+  width: 3.9rem;
+  height: 2.15rem;
+  padding: 0 !important;
+  justify-content: center;
+  background: linear-gradient(135deg, {input_bg} 0%, {input_bg_hover} 100%);
+  box-shadow: inset 0 0 0 1px var(--zp-border), 0 10px 30px {toggle_glow};
+}}
+.st-key-theme_toggle button::before {{
+  content: "";
+  position: absolute;
+  left: 0.32rem;
+  top: 0.28rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: {toggle_thumb};
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  transform: translateX({toggle_translate});
+  transition: transform 220ms ease, background 220ms ease;
+}}
+.st-key-theme_toggle button > div,
+.st-key-theme_toggle button p {{
+  opacity: 0;
+}}
+.st-key-theme_toggle button::after {{
+  content: {toggle_icon};
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zp-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}}
+[data-testid="stSidebar"] .st-key-theme_toggle button,
+[data-testid="stSidebar"] .st-key-theme_toggle button::after {{
+  color: var(--zp-ink);
+}}
+@media (max-width: 900px) {{
+  .zp-meta-grid {{
+    grid-template-columns: 1fr;
+  }}
 }}
 </style>
 """.strip()
