@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from zprompt_helper.domain.models import TemplateDefinition
-from zprompt_helper.ui.history_panel import render_history_panel
-from zprompt_helper.ui.shadcn import render_tabs
 from zprompt_helper.workbench.session import EditorSession
 
 
@@ -52,19 +50,6 @@ def render_workbench_header_panel(
             icon="✦" if summary.filled_count or summary.has_final_prompt else "○",
         )
         _caption(st_module, f"Shared idea: {short_idea.strip() or 'Not set yet'}")
-        _markdown(
-            st_module,
-            "\n".join(
-                [
-                    '<div class="zp-meta-grid">',
-                    f'<div class="zp-meta-card"><strong>{summary.active_block_count}</strong><span>active blocks</span></div>',
-                    f'<div class="zp-meta-card"><strong>{summary.filled_count}</strong><span>filled blocks</span></div>',
-                    f'<div class="zp-meta-card"><strong>{summary.locked_count}</strong><span>locked blocks</span></div>',
-                    "</div>",
-                ]
-            ),
-            unsafe_allow_html=True,
-        )
     return selected_name
 
 
@@ -73,9 +58,21 @@ def render_workbench_editor_panel(
     *,
     template: TemplateDefinition,
     session: EditorSession,
-) -> None:
+) -> dict[str, bool]:
     with _container(st_module, border=True, key="workbench_editor_panel"):
         _subheader(st_module, "Block editor")
+
+        with _container(st_module, key="editor_gen_row"):
+            col1, col2 = _columns(st_module, [1, 1])
+            generate = col1.button("Сгенерировать", key="generate")
+            regenerate = col2.button("Перегенерировать незаблокированные", key="regenerate_unlocked")
+
+        with _container(st_module, key="editor_ctrl_row"):
+            col3, col4, col5 = _columns(st_module, [1, 1, 1])
+            clear_unlocked = col3.button("Очистить незаблокированные", key="clear_unlocked")
+            lock_all = col4.button("Заблокировать все блоки", key="lock_all")
+            unlock_all = col5.button("Разблокировать все блоки", key="unlock_all")
+
         session.short_idea = st_module.text_area(
             "Кратко о том, что хотите создать",
             value=session.short_idea,
@@ -101,6 +98,14 @@ def render_workbench_editor_panel(
             else:
                 session.locked_blocks.discard(block_id)
 
+    return {
+        "generate": generate,
+        "regenerate": regenerate,
+        "clear_unlocked": clear_unlocked,
+        "lock_all": lock_all,
+        "unlock_all": unlock_all,
+    }
+
 
 def render_workbench_output_panel(
     st_module: Any,
@@ -108,9 +113,7 @@ def render_workbench_output_panel(
     session: EditorSession,
     template: TemplateDefinition,
     summary: WorkbenchSummary,
-    history_entries: list[dict],
-    history_store: Any,
-) -> None:
+) -> dict[str, bool]:
     with _container(st_module, border=True, key="workbench_output_panel"):
         _subheader(st_module, "Prompt output")
         _status_chip(
@@ -134,38 +137,15 @@ def render_workbench_output_panel(
                 unsafe_allow_html=True,
             )
 
-    tabs = render_tabs(st_module, ["Actions", "History"])
-    with tabs[0]:
-        with _container(st_module, border=True, key="workbench_actions_panel"):
-            col1, col2, col3 = _columns(st_module, [1, 1, 1])
-            generate = col1.button("Сгенерировать", key="generate")
-            regenerate = col2.button("Перегенерировать незаблокированные", key="regenerate_unlocked")
-            rebuild = col3.button("Пересобрать промт", key="rebuild_prompt")
-            col4, col5, col6 = _columns(st_module, [1, 1, 1])
-            clear_unlocked = col4.button("Очистить незаблокированные", key="clear_unlocked")
-            lock_all = col5.button("Заблокировать все блоки", key="lock_all")
-            unlock_all = col6.button("Разблокировать все блоки", key="unlock_all")
-            copy_prompt = st_module.button("Скопировать промт", key="copy_prompt")
+        with _container(st_module, key="output_action_row"):
+            col1, col2 = _columns(st_module, [1, 1])
+            rebuild = col1.button("Пересобрать промт", key="rebuild_prompt")
+            copy_prompt = col2.button("Скопировать промт", key="copy_prompt")
 
-        st_module.session_state["_workbench_actions"] = {
-            "generate": generate,
-            "regenerate": regenerate,
-            "rebuild": rebuild,
-            "clear_unlocked": clear_unlocked,
-            "lock_all": lock_all,
-            "unlock_all": unlock_all,
-            "copy_prompt": copy_prompt,
-        }
-
-    with tabs[1]:
-        if history_entries:
-            render_history_panel(history_entries, history_store)
-        else:
-            _markdown(
-                st_module,
-                '<div class="zp-empty">History will appear here after you save or generate prompts.</div>',
-                unsafe_allow_html=True,
-            )
+    return {
+        "rebuild": rebuild,
+        "copy_prompt": copy_prompt,
+    }
 
 
 def _columns(st_module: Any, spec: list[float]) -> list[Any]:

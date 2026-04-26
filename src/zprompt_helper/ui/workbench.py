@@ -182,7 +182,6 @@ def render_workbench(view_model: dict) -> None:
     generation_service = view_model.get("generation_service")
     generation_factory = view_model.get("generation_factory")
     history_store = view_model.get("history_store")
-    history_entries = view_model.get("history_entries", [])
     session = view_model.get("session") or st.session_state.get("workbench_session")
     if session is None:
         session = EditorSession()
@@ -228,23 +227,21 @@ def render_workbench(view_model: dict) -> None:
 
     left_col, right_col = _columns(st, [1.45, 1.0])
     with _column_scope(left_col):
-        render_workbench_editor_panel(
+        editor_actions = render_workbench_editor_panel(
             st,
             template=template,
             session=session,
         )
     summary = build_workbench_summary(session, active_block_count=len(active_blocks))
     with _column_scope(right_col):
-        render_workbench_output_panel(
+        output_actions = render_workbench_output_panel(
             st,
             session=session,
             template=template,
             summary=summary,
-            history_entries=history_entries,
-            history_store=history_store,
         )
 
-    actions = st.session_state.get("_workbench_actions", {})
+    actions = editor_actions | output_actions
     generate = bool(actions.get("generate"))
     regenerate = bool(actions.get("regenerate"))
     rebuild = bool(actions.get("rebuild"))

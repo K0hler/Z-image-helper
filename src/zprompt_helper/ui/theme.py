@@ -152,8 +152,7 @@ code, pre, textarea {{
 }}
 .st-key-workbench_header_panel,
 .st-key-workbench_editor_panel,
-.st-key-workbench_output_panel,
-.st-key-workbench_actions_panel {{
+.st-key-workbench_output_panel {{
   border-radius: 24px;
   border: 1px solid {panel_border};
   box-shadow: 0 18px 38px {panel_shadow};
@@ -169,9 +168,6 @@ code, pre, textarea {{
   background: {panel_bg_output};
   border-color: {panel_border_strong};
 }}
-.st-key-workbench_actions_panel {{
-  background: {panel_bg};
-}}
 [data-testid="stHorizontalBlock"] .st-key-workbench_editor_panel,
 [data-testid="stHorizontalBlock"] .st-key-workbench_output_panel {{
   position: relative;
@@ -185,9 +181,15 @@ code, pre, textarea {{
   pointer-events: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }}
+[data-testid="stTextInputRootElement"],
+[data-testid="stNumberInputContainer"] {{
+  border: 1px solid {input_border} !important;
+  border-radius: 18px !important;
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  box-shadow: none !important;
+}}
 [data-testid="stTextArea"] [data-baseweb="textarea"],
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
-[data-testid="stNumberInput"] [data-baseweb="base-input"],
 [data-testid="stSelectbox"] [data-baseweb="select"] > div,
 [data-testid="stCodeBlock"] pre,
 [data-testid="stCode"] {{
@@ -196,6 +198,17 @@ code, pre, textarea {{
   background-image: none !important;
   color: var(--zp-ink) !important;
   border: 1px solid {input_border} !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}}
+[data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+[data-testid="stNumberInput"] [data-baseweb="base-input"],
+[data-testid="stNumberInputContainer"] > div {{
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: var(--zp-ink) !important;
+  border: none !important;
   box-shadow: none !important;
   overflow: hidden !important;
 }}
@@ -234,10 +247,9 @@ code, pre, textarea {{
   background-color: transparent !important;
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"]:hover,
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:hover,
-[data-testid="stNumberInput"] [data-baseweb="base-input"]:hover,
+[data-testid="stTextInputRootElement"]:hover,
+[data-testid="stNumberInputContainer"]:hover,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
-[data-baseweb="base-input"]:hover,
 [data-baseweb="textarea"]:hover {{
   background: {input_bg_hover} !important;
   background-color: {input_bg_hover} !important;
@@ -245,10 +257,9 @@ code, pre, textarea {{
   border-color: {input_border_hover} !important;
 }}
 [data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within,
-[data-testid="stTextInputRootElement"] [data-baseweb="base-input"]:focus-within,
-[data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within,
+[data-testid="stTextInputRootElement"]:focus-within,
+[data-testid="stNumberInputContainer"]:focus-within,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
-[data-baseweb="base-input"]:focus-within,
 [data-baseweb="textarea"]:focus-within {{
   background: {input_bg_active} !important;
   background-color: {input_bg_active} !important;
@@ -403,6 +414,41 @@ div[role="radiogroup"] > label:hover {{
 [data-testid="stButton"] button[kind="primary"]:hover {{
   background: linear-gradient(135deg, #b76734 0%, #d28a58 100%);
 }}
+[data-testid="stFormSubmitButton"] button {{
+  border-radius: 999px !important;
+  border: 1px solid {panel_border} !important;
+  background: {input_bg} !important;
+  color: var(--zp-ink) !important;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}}
+[data-testid="stFormSubmitButton"] button:hover {{
+  border-color: var(--zp-accent) !important;
+  background: {input_bg_hover} !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px {shadow};
+}}
+[data-testid="stNumberInputStepDown"],
+[data-testid="stNumberInputStepUp"] {{
+  background: {input_bg} !important;
+  background-color: {input_bg} !important;
+  color: var(--zp-ink) !important;
+  border: none !important;
+  border-left: 1px solid {input_border} !important;
+}}
+[data-testid="stNumberInputStepDown"]:hover,
+[data-testid="stNumberInputStepUp"]:hover {{
+  background: {input_bg_hover} !important;
+  background-color: {input_bg_hover} !important;
+}}
+[data-testid="stTextInputRootElement"] button {{
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--zp-ink) !important;
+  border: none !important;
+}}
+[data-testid="stTextInputRootElement"] button svg {{
+  fill: var(--zp-ink) !important;
+}}
 [data-testid="stTabs"] [role="tablist"] {{
   gap: 0.5rem;
 }}
@@ -549,29 +595,60 @@ div[data-testid="stRadio"] label {{
   transform: translateY(-1px);
   box-shadow: 0 8px 20px {toggle_glow};
 }}
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] {{
-  align-items: stretch;
+.st-key-editor_gen_row [data-testid="stHorizontalBlock"],
+.st-key-editor_ctrl_row [data-testid="stHorizontalBlock"],
+.st-key-output_action_row [data-testid="stHorizontalBlock"] {{
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-start;
 }}
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn {{
-  display: flex;
-  flex-direction: column;
+.st-key-editor_gen_row .stColumn,
+.st-key-editor_ctrl_row .stColumn,
+.st-key-output_action_row .stColumn {{
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
 }}
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn > div,
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stVerticalBlock"],
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stElementContainer"],
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stButton"],
-.st-key-workbench_actions_panel [data-testid="stHorizontalBlock"] .stColumn [data-testid="stButton"] > div {{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.st-key-editor_gen_row [data-testid="stButton"] button,
+.st-key-editor_ctrl_row [data-testid="stButton"] button,
+.st-key-output_action_row [data-testid="stButton"] button {{
+  white-space: nowrap;
 }}
-.st-key-workbench_actions_panel [data-testid="stButton"] button {{
-  min-height: 3rem;
-  height: 100%;
-  line-height: 1.3;
-  white-space: normal;
-  word-break: break-word;
-  text-align: center;
+.st-key-generate button {{
+  background: linear-gradient(135deg, #1d6b40 0%, #268050 100%) !important;
+  color: #e4f7ed !important;
+  border-color: rgba(38, 128, 80, 0.4) !important;
+}}
+.st-key-generate button:hover {{
+  background: linear-gradient(135deg, #268050 0%, #309a61 100%) !important;
+  border-color: rgba(48, 154, 97, 0.5) !important;
+  transform: translateY(-1px);
+}}
+.st-key-copy_prompt button {{
+  background: linear-gradient(135deg, #7a5c0e 0%, #9e7918 100%) !important;
+  color: #fef8e2 !important;
+  border-color: rgba(158, 121, 24, 0.4) !important;
+}}
+.st-key-copy_prompt button:hover {{
+  background: linear-gradient(135deg, #9e7918 0%, #be9422 100%) !important;
+  border-color: rgba(190, 148, 34, 0.5) !important;
+  transform: translateY(-1px);
+}}
+[data-testid="stToast"] {{
+  background: {panel_bg} !important;
+  background-color: {panel_bg} !important;
+  border: 1px solid {panel_border} !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 36px {panel_shadow} !important;
+}}
+[data-testid="stToast"] p,
+[data-testid="stToast"] span,
+[data-testid="stToast"] div,
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] {{
+  color: var(--zp-ink) !important;
+}}
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] p {{
+  color: var(--zp-ink) !important;
 }}
 @media (max-width: 900px) {{
   .zp-meta-grid {{
