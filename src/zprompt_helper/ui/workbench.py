@@ -139,12 +139,12 @@ def pop_workbench_notice(streamlit_module: Any) -> str | None:
     return streamlit_module.session_state.pop("_workbench_notice", None)
 
 
-def set_workbench_generating(st_module: Any, action: str) -> None:
-    st_module.session_state["_workbench_generating"] = action
+def set_workbench_generating(streamlit_module: Any, action: str) -> None:
+    streamlit_module.session_state["_workbench_generating"] = action
 
 
-def pop_workbench_generating(st_module: Any) -> str | None:
-    return st_module.session_state.pop("_workbench_generating", None)
+def pop_workbench_generating(streamlit_module: Any) -> str | None:
+    return streamlit_module.session_state.pop("_workbench_generating", None)
 
 
 def rerun_workbench(streamlit_module: Any) -> None:
