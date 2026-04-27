@@ -316,6 +316,337 @@ def test_permanently_non_string_block_values_raise_generation_response_error() -
     assert calls == 2
 
 
+def test_markdown_fenced_json_is_parsed_without_retry() -> None:
+    calls = 0
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        fenced = "```json\n" + json.dumps({"subject": "robot", "style": "cinematic"}) + "\n```"
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": fenced}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    result = _generate(service)
+
+    assert result == {"subject": "robot", "style": "cinematic"}
+    assert calls == 1
+
+
+def test_bare_fenced_json_without_language_tag_is_parsed() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        fenced = "```\n" + json.dumps({"subject": "robot", "style": "cinematic"}) + "\n```"
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": fenced}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    assert _generate(service) == {"subject": "robot", "style": "cinematic"}
+
+
+def test_error_message_includes_underlying_cause_and_content_snippet() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "totally not json"}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "JSONDecodeError" in message
+    assert "totally not json" in message
+
+
+def test_error_message_handles_empty_content() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": ""}}]},
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "empty response" in message
+
+
+def test_reasoning_field_is_used_when_content_is_null() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": None,
+                            "reasoning": json.dumps(
+                                {"subject": "robot", "style": "cinematic"}
+                            ),
+                        }
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    assert _generate(service) == {"subject": "robot", "style": "cinematic"}
+
+
+def test_fenced_json_inside_reasoning_field_is_parsed() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        fenced = "```json\n" + json.dumps({"subject": "robot", "style": "cinematic"}) + "\n```"
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"message": {"content": None, "reasoning": fenced}}
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    assert _generate(service) == {"subject": "robot", "style": "cinematic"}
+
+
+def test_refusal_surfaces_clear_error() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"message": {"content": None, "refusal": "I can't help with that."}}
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    assert "refused" in str(exc_info.value)
+
+
+def test_silent_empty_response_drops_schema_and_retries_without_burning_validation_retry() -> None:
+    calls: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        calls.append(payload)
+        if "response_format" in payload:
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": None,
+                                "reasoning": None,
+                                "refusal": None,
+                            },
+                            "finish_reason": None,
+                        }
+                    ],
+                    "usage": {"completion_tokens": 0},
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {"subject": "robot", "style": "cinematic"}
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    assert _generate(service) == {"subject": "robot", "style": "cinematic"}
+    assert len(calls) == 2
+    assert "response_format" in calls[0]
+    assert "response_format" not in calls[1]
+    assert json.loads(calls[1]["messages"][2]["content"])["retry"] is False
+
+
+def test_zero_completion_tokens_surfaces_provider_specific_error() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "model": "minimax/minimax-m2.5:free",
+                "provider": "OpenInference",
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": None,
+                            "reasoning": None,
+                            "refusal": None,
+                        },
+                        "finish_reason": None,
+                    }
+                ],
+                "usage": {"completion_tokens": 0},
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "0 completion tokens" in message
+    assert "OpenInference" in message
+    assert "minimax" in message
+
+
+def test_empty_response_dumps_full_payload_for_diagnostics() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "gen-xyz",
+                "choices": [
+                    {"message": {"role": "assistant"}, "finish_reason": None}
+                ],
+                "provider": "some-provider",
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "empty response" in message
+    assert "gen-xyz" in message
+    assert "some-provider" in message
+
+
+def test_top_level_error_in_response_body_is_surfaced() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "error": {"code": 402, "message": "Insufficient credits"},
+                "choices": [],
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "OpenRouter returned an error" in message
+    assert "Insufficient credits" in message
+
+
+def test_choice_level_error_is_surfaced() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "error": {"message": "Provider unavailable"},
+                        "message": {"role": "assistant"},
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    assert "Provider unavailable" in str(exc_info.value)
+
+
+def test_missing_choices_array_is_surfaced() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"id": "gen-empty"})
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    assert "no choices" in str(exc_info.value)
+    assert "gen-empty" in str(exc_info.value)
+
+
+def test_finish_reason_length_surfaces_actionable_error() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": None, "role": "assistant"},
+                        "finish_reason": "length",
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    message = str(exc_info.value)
+    assert "max_tokens" in message
+    assert "length" in message
+
+
+def test_finish_reason_content_filter_surfaces_actionable_error() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": None, "role": "assistant"},
+                        "finish_reason": "content_filter",
+                    }
+                ]
+            },
+        )
+
+    service = _service_with_handler(handler)
+
+    with pytest.raises(GenerationResponseError) as exc_info:
+        _generate(service)
+
+    assert "content filter" in str(exc_info.value)
+
+
 def test_regenerate_payload_includes_variation_controls() -> None:
     captured: dict[str, object] = {}
 
