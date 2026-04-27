@@ -658,3 +658,17 @@ def test_editor_panel_disables_generate_buttons_when_generating() -> None:
 
     assert actions["generate"] is False
     assert actions["regenerate"] is False
+
+
+def test_output_panel_does_not_render_prompt_text_area_when_generating() -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    session = EditorSession()
+    summary = build_workbench_summary(session, active_block_count=len(template.block_order))
+
+    render_workbench_output_panel(
+        fake_st, session=session, template=template, summary=summary, generating=True
+    )
+
+    assert f"final-prompt-{template.id}" not in fake_st.instantiated_keys

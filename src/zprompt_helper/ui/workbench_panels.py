@@ -118,6 +118,7 @@ def render_workbench_output_panel(
     session: EditorSession,
     template: TemplateDefinition,
     summary: WorkbenchSummary,
+    generating: bool = False,
 ) -> dict[str, bool]:
     with _container(st_module, border=True, key="workbench_output_panel"):
         _subheader(st_module, "Prompt output")
@@ -127,20 +128,23 @@ def render_workbench_output_panel(
             tone="accent" if summary.variation_index else "muted",
             icon="◌" if summary.variation_index else "—",
         )
-        session.final_prompt = st_module.text_area(
-            "Финальный промт",
-            value=session.final_prompt,
-            key=f"final-prompt-{template.id}",
-            height=180,
-        )
-        if session.final_prompt:
-            st_module.code(session.final_prompt)
+        if generating:
+            _markdown(st_module, "⏳ **Генерирую промт…**")
         else:
-            _markdown(
-                st_module,
-                '<div class="zp-empty">Generate or rebuild to see the final prompt here.</div>',
-                unsafe_allow_html=True,
+            session.final_prompt = st_module.text_area(
+                "Финальный промт",
+                value=session.final_prompt,
+                key=f"final-prompt-{template.id}",
+                height=180,
             )
+            if session.final_prompt:
+                st_module.code(session.final_prompt)
+            else:
+                _markdown(
+                    st_module,
+                    '<div class="zp-empty">Generate or rebuild to see the final prompt here.</div>',
+                    unsafe_allow_html=True,
+                )
 
         with _container(st_module, key="output_action_row"):
             col1, col2 = _columns(st_module, [1, 1])
