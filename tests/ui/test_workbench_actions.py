@@ -57,6 +57,12 @@ class FakeColumn:
     def button(self, label: str, *, key: str, disabled: bool = False) -> bool:
         return self._streamlit.button(label, key=key, disabled=disabled)
 
+    def markdown(self, _: str, **kwargs: object) -> None:
+        return None
+
+    def checkbox(self, label: str, *, value: bool = False, key: str, **kwargs: object) -> bool:
+        return self._streamlit.checkbox(label, value=value, key=key)
+
 
 class FakeStreamlit:
     def __init__(self) -> None:
@@ -86,6 +92,12 @@ class FakeStreamlit:
         self.instantiated_keys.add(key)
         return str(value)
 
+    def markdown(self, _: str, **kwargs: object) -> None:
+        return None
+
+    def divider(self) -> None:
+        return None
+
     def text_area(
         self,
         _: str,
@@ -93,6 +105,7 @@ class FakeStreamlit:
         value: str = "",
         key: str,
         height: int | None = None,
+        **kwargs: object,
     ) -> str:
         del height
         if key not in self.session_state:
@@ -100,7 +113,7 @@ class FakeStreamlit:
         self.instantiated_keys.add(key)
         return str(self.session_state[key])
 
-    def checkbox(self, _: str, *, value: bool = False, key: str) -> bool:
+    def checkbox(self, _: str, *, value: bool = False, key: str, **kwargs: object) -> bool:
         if key not in self.session_state:
             self.session_state[key] = value
         self.instantiated_keys.add(key)

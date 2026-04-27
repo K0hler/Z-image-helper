@@ -557,6 +557,38 @@ div[role="radiogroup"] > label:hover {{
 .zp-empty {{
   color: var(--zp-muted);
 }}
+.st-key-short_idea_section {{
+  border-left: 3px solid var(--zp-accent);
+  padding-left: 0.85rem;
+  border-radius: 2px;
+  margin-bottom: 0.15rem;
+}}
+.zp-idea-label {{
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zp-accent);
+  margin: 0 0 0.15rem;
+}}
+.st-key-workbench_editor_panel [data-testid="stCheckbox"] {{
+  margin-top: 0.5rem;
+  margin-bottom: -0.2rem;
+  padding: 0;
+}}
+.st-key-workbench_editor_panel [data-testid="stCheckbox"] label {{
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--zp-muted) !important;
+  gap: 0.45rem;
+}}
+.st-key-workbench_editor_panel [data-testid="stTextArea"] {{
+  margin-bottom: 0 !important;
+}}
+.st-key-workbench_editor_panel hr {{
+  margin: 0.55rem 0 0.35rem;
+  opacity: 0.45;
+}}
 div[data-testid="stRadio"] label {{
   font-weight: 600;
 }}

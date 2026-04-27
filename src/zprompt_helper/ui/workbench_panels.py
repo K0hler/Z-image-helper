@@ -78,25 +78,37 @@ def render_workbench_editor_panel(
             lock_all = col4.button("Заблокировать все блоки", key="lock_all")
             unlock_all = col5.button("Разблокировать все блоки", key="unlock_all")
 
-        session.short_idea = st_module.text_area(
-            "Кратко о том, что хотите создать",
-            value=session.short_idea,
-            key="short_idea",
-            height=100,
-        )
+        with _container(st_module, key="short_idea_section"):
+            _markdown(
+                st_module,
+                '<p class="zp-idea-label">✦ Ваша идея</p>',
+                unsafe_allow_html=True,
+            )
+            session.short_idea = st_module.text_area(
+                "Кратко о том, что хотите создать",
+                value=session.short_idea,
+                key="short_idea",
+                height=100,
+                label_visibility="collapsed",
+            )
+        divider_fn = getattr(st_module, "divider", None)
+        if callable(divider_fn):
+            divider_fn()
         for block_id in template.block_order:
             block = template.blocks[block_id]
             if not block.enabled:
                 continue
+            locked = st_module.checkbox(
+                block.label,
+                value=block_id in session.locked_blocks,
+                key=f"lock-{template.id}-{block_id}",
+                help="Зафиксировать блок",
+            )
             session.block_values[block_id] = st_module.text_area(
                 block.label,
                 value=session.block_values.get(block_id, ""),
                 key=f"block-{template.id}-{block_id}",
-            )
-            locked = st_module.checkbox(
-                "Зафиксировать блок",
-                value=block_id in session.locked_blocks,
-                key=f"lock-{template.id}-{block_id}",
+                label_visibility="collapsed",
             )
             if locked:
                 session.locked_blocks.add(block_id)
@@ -128,25 +140,28 @@ def render_workbench_output_panel(
             tone="accent" if summary.variation_index else "muted",
             icon="◌" if summary.variation_index else "—",
         )
-        if generating:
-            _markdown(st_module, "⏳ **Генерирую промт…**")
-        else:
-            session.final_prompt = st_module.text_area(
-                "Финальный промт",
-                value=session.final_prompt,
-                key=f"final-prompt-{template.id}",
-                height=180,
-            )
-            if session.final_prompt:
-                st_module.code(session.final_prompt)
+        with _container(st_module):
+            if generating:
+                _markdown(st_module, "⏳ **Генерирую промт…**")
             else:
-                _markdown(
-                    st_module,
-                    '<div class="zp-empty">Generate or rebuild to see the final prompt here.</div>',
-                    unsafe_allow_html=True,
+                final_prompt_key = f"final-prompt-{template.id}"
+                if final_prompt_key not in st_module.session_state:
+                    st_module.session_state[final_prompt_key] = session.final_prompt
+                session.final_prompt = st_module.text_area(
+                    "Финальный промт",
+                    key=final_prompt_key,
+                    height=180,
                 )
+                if session.final_prompt:
+                    st_module.code(session.final_prompt)
+                else:
+                    _markdown(
+                        st_module,
+                        '<div class="zp-empty">Generate or rebuild to see the final prompt here.</div>',
+                        unsafe_allow_html=True,
+                    )
 
-        with _container(st_module, key="output_action_row"):
+        with _container(st_module):
             col1, col2 = _columns(st_module, [1, 1])
             rebuild = col1.button("Пересобрать промт", key="rebuild_prompt")
             copy_prompt = col2.button("Скопировать промт", key="copy_prompt")
