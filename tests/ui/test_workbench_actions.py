@@ -45,6 +45,11 @@ class FakeGenerationService:
         }
 
 
+class FakeFailingGenerationService:
+    def generate_blocks(self, **_: object) -> dict[str, str]:
+        raise RuntimeError("API timeout")
+
+
 class FakeColumn:
     def __init__(self, streamlit: "FakeStreamlit") -> None:
         self._streamlit = streamlit
@@ -58,6 +63,7 @@ class FakeStreamlit:
         self.session_state = FakeSessionState()
         self._button_presses = {"generate": True}
         self.success_messages: list[str] = []
+        self.error_messages: list[str] = []
         self.caption_messages: list[str] = []
         self.instantiated_keys: set[str] = set()
         self.rerun_requested = False
@@ -66,7 +72,7 @@ class FakeStreamlit:
         return None
 
     def error(self, message: str) -> None:
-        raise AssertionError(message)
+        self.error_messages.append(message)
 
     def success(self, message: str) -> None:
         self.success_messages.append(message)
@@ -776,3 +782,35 @@ def test_generating_flag_executes_generation_and_clears_flag(monkeypatch) -> Non
     assert "_workbench_generating" not in fake_st.session_state
     assert len(generation_service.calls) == 1
     assert fake_st.rerun_requested is True
+
+
+def test_generation_error_clears_generating_flag_and_shows_error(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {}
+    fake_st.session_state["_workbench_generating"] = "generate"
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = "short idea"
+    fake_st.session_state[f"block-{template.id}-subject"] = ""
+    fake_st.session_state[f"block-{template.id}-scene"] = ""
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+
+    render_workbench(
+        {
+            "templates": [template],
+            "generation_service": FakeFailingGenerationService(),
+            "history_store": FakeHistoryStore(),
+            "settings": {
+                "model": "openai/gpt-4o-mini",
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 700,
+            },
+        }
+    )
+
+    assert "_workbench_generating" not in fake_st.session_state
+    assert len(fake_st.error_messages) == 1
+    assert "Не удалось сгенерировать промт" in fake_st.error_messages[0]
