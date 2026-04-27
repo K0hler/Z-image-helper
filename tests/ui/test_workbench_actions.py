@@ -336,42 +336,42 @@ def test_render_workbench_updates_widget_state_after_generation_on_rerun(monkeyp
     monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
 
     history_store = FakeHistoryStore()
-    render_workbench(
-        {
-            "templates": [template],
-            "generation_service": FakeGenerationService(),
-            "history_store": history_store,
-            "settings": {
-                "model": "openai/gpt-4o-mini",
-                "temperature": 0.2,
-                "top_p": 0.9,
-                "max_tokens": 700,
-            },
-        }
-    )
+    view_model = {
+        "templates": [template],
+        "generation_service": FakeGenerationService(),
+        "history_store": history_store,
+        "settings": {
+            "model": "openai/gpt-4o-mini",
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 700,
+        },
+    }
+
+    # Rerun 1: generate button pressed → flag set, no generation yet
+    fake_st._button_presses = {"generate": True}
+    render_workbench(view_model)
+
+    assert fake_st.session_state["_workbench_generating"] == "generate"
+    assert fake_st.rerun_requested is True
+    assert history_store.prompts == []
+
+    # Rerun 2: flag set → generation executes → widget state queued
+    fake_st._button_presses = {}
+    fake_st.rerun_requested = False
+    fake_st.instantiated_keys.clear()
+    render_workbench(view_model)
 
     assert fake_st.rerun_requested is True
     assert history_store.prompts == ["cinematic film still, android courier, rainy neon street"]
-    assert fake_st.success_messages == []
-    assert fake_st.session_state[f"block-{template.id}-subject"] == ""
+    assert "_workbench_generating" not in fake_st.session_state
     assert "_workbench_pending_widget_state" in fake_st.session_state
+    assert fake_st.session_state[f"block-{template.id}-subject"] == ""
 
-    fake_st._button_presses = {}
+    # Rerun 3: widget state applied → results visible in session state
+    fake_st.rerun_requested = False
     fake_st.instantiated_keys.clear()
-
-    render_workbench(
-        {
-            "templates": [template],
-            "generation_service": FakeGenerationService(),
-            "history_store": history_store,
-            "settings": {
-                "model": "openai/gpt-4o-mini",
-                "temperature": 0.2,
-                "top_p": 0.9,
-                "max_tokens": 700,
-            },
-        }
-    )
+    render_workbench(view_model)
 
     assert fake_st.session_state[f"block-{template.id}-subject"] == "android courier"
     assert fake_st.session_state[f"block-{template.id}-scene"] == "rainy neon street"
@@ -395,19 +395,28 @@ def test_render_workbench_regenerate_passes_variation_controls(monkeypatch) -> N
 
     history_store = FakeHistoryStore()
     generation_service = FakeGenerationService()
-    render_workbench(
-        {
-            "templates": [template],
-            "generation_service": generation_service,
-            "history_store": history_store,
-            "settings": {
-                "model": "openai/gpt-4o-mini",
-                "temperature": 0.2,
-                "top_p": 0.9,
-                "max_tokens": 700,
-            },
-        }
-    )
+    view_model = {
+        "templates": [template],
+        "generation_service": generation_service,
+        "history_store": history_store,
+        "settings": {
+            "model": "openai/gpt-4o-mini",
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 700,
+        },
+    }
+
+    # Rerun 1: button click → flag set, no generation
+    render_workbench(view_model)
+    assert fake_st.session_state["_workbench_generating"] == "regenerate"
+    assert generation_service.calls == []
+
+    # Rerun 2: flag set → generation executes
+    fake_st._button_presses = {}
+    fake_st.rerun_requested = False
+    fake_st.instantiated_keys.clear()
+    render_workbench(view_model)
 
     assert generation_service.calls[0]["regenerate_unlocked"] is True
     assert generation_service.calls[0]["variation_index"] == 1
@@ -431,19 +440,28 @@ def test_render_workbench_generate_does_not_send_old_unlocked_values(monkeypatch
     monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
 
     generation_service = FakeGenerationService()
-    render_workbench(
-        {
-            "templates": [template],
-            "generation_service": generation_service,
-            "history_store": FakeHistoryStore(),
-            "settings": {
-                "model": "openai/gpt-4o-mini",
-                "temperature": 0.2,
-                "top_p": 0.9,
-                "max_tokens": 700,
-            },
-        }
-    )
+    view_model = {
+        "templates": [template],
+        "generation_service": generation_service,
+        "history_store": FakeHistoryStore(),
+        "settings": {
+            "model": "openai/gpt-4o-mini",
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 700,
+        },
+    }
+
+    # Rerun 1: button click → flag set, no generation
+    render_workbench(view_model)
+    assert fake_st.session_state["_workbench_generating"] == "generate"
+    assert generation_service.calls == []
+
+    # Rerun 2: flag set → generation executes
+    fake_st._button_presses = {}
+    fake_st.rerun_requested = False
+    fake_st.instantiated_keys.clear()
+    render_workbench(view_model)
 
     assert generation_service.calls[0]["current_values"] == {"shot": "close-up"}
     assert generation_service.calls[0]["locked_blocks"] == {"shot"}
@@ -672,3 +690,89 @@ def test_output_panel_does_not_render_prompt_text_area_when_generating() -> None
     )
 
     assert f"final-prompt-{template.id}" not in fake_st.instantiated_keys
+
+
+def test_generate_click_sets_generating_flag_and_reruns(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {"generate": True}
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = "short idea"
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+    generation_service = FakeGenerationService()
+
+    render_workbench(
+        {
+            "templates": [template],
+            "generation_service": generation_service,
+            "history_store": FakeHistoryStore(),
+            "settings": {
+                "model": "openai/gpt-4o-mini",
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 700,
+            },
+        }
+    )
+
+    assert fake_st.session_state["_workbench_generating"] == "generate"
+    assert fake_st.rerun_requested is True
+    assert generation_service.calls == []
+
+
+def test_regenerate_click_sets_generating_flag(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {"regenerate_unlocked": True}
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = "short idea"
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+
+    render_workbench(
+        {
+            "templates": [template],
+            "generation_service": FakeGenerationService(),
+            "history_store": FakeHistoryStore(),
+            "settings": {},
+        }
+    )
+
+    assert fake_st.session_state["_workbench_generating"] == "regenerate"
+    assert fake_st.rerun_requested is True
+
+
+def test_generating_flag_executes_generation_and_clears_flag(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {}
+    fake_st.session_state["_workbench_generating"] = "generate"
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = "short idea"
+    fake_st.session_state[f"block-{template.id}-subject"] = ""
+    fake_st.session_state[f"block-{template.id}-scene"] = ""
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+    generation_service = FakeGenerationService()
+
+    render_workbench(
+        {
+            "templates": [template],
+            "generation_service": generation_service,
+            "history_store": FakeHistoryStore(),
+            "settings": {
+                "model": "openai/gpt-4o-mini",
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 700,
+            },
+        }
+    )
+
+    assert "_workbench_generating" not in fake_st.session_state
+    assert len(generation_service.calls) == 1
+    assert fake_st.rerun_requested is True

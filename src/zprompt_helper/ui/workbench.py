@@ -235,6 +235,9 @@ def render_workbench(view_model: dict) -> None:
     activate_template(session, template.id)
     apply_pending_workbench_widget_state(st)
 
+    generating_action = st.session_state.get("_workbench_generating")
+    generating = bool(generating_action)
+
     if current_template_has_meaningful_draft(session):
         st.caption("Черновик этого шаблона сохраняется автоматически.")
     else:
@@ -246,6 +249,7 @@ def render_workbench(view_model: dict) -> None:
             st,
             template=template,
             session=session,
+            generating=generating,
         )
     summary = build_workbench_summary(session, active_block_count=len(active_blocks))
     with _column_scope(right_col):
@@ -254,6 +258,7 @@ def render_workbench(view_model: dict) -> None:
             session=session,
             template=template,
             summary=summary,
+            generating=generating,
         )
 
     actions = editor_actions | output_actions
@@ -265,7 +270,7 @@ def render_workbench(view_model: dict) -> None:
     unlock_all = bool(actions.get("unlock_all"))
     copy_prompt = bool(actions.get("copy_prompt"))
 
-    if generate or regenerate:
+    if generating_action:
         try:
             if settings_service is not None:
                 settings = settings_service.load()
@@ -273,17 +278,17 @@ def render_workbench(view_model: dict) -> None:
                 generation_factory,
                 _setting(settings, "api_key", ""),
             )
-            if regenerate:
+            if generating_action == "regenerate":
                 session.variation_index += 1
             else:
                 session.variation_index = 0
             request = build_generation_request(
                 template,
                 session,
-                regenerate_unlocked=regenerate,
+                regenerate_unlocked=(generating_action == "regenerate"),
                 variation_index=session.variation_index,
             )
-            with _spinner(st, "Generating prompt..."):
+            with _spinner(st, "Генерирую промт…"):
                 generated = service.generate_blocks(
                     model=_setting(settings, "model", ""),
                     temperature=float(_setting(settings, "temperature", 0.2)),
@@ -300,11 +305,23 @@ def render_workbench(view_model: dict) -> None:
             queue_workbench_widget_state(st, template, session, request["active_blocks"])
             if history_store is not None:
                 record_prompt_if_present(history_store, session.final_prompt)
+            pop_workbench_generating(st)
             set_workbench_notice(st, "Промт обновлен.")
             rerun_workbench(st)
             return
         except Exception as error:
+            pop_workbench_generating(st)
             st.error(f"Не удалось сгенерировать промт: {error}")
+        return
+
+    if generate:
+        set_workbench_generating(st, "generate")
+        rerun_workbench(st)
+        return
+    if regenerate:
+        set_workbench_generating(st, "regenerate")
+        rerun_workbench(st)
+        return
 
     if rebuild:
         apply_generated_result(
