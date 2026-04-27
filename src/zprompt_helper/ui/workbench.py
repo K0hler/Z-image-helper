@@ -139,6 +139,14 @@ def pop_workbench_notice(streamlit_module: Any) -> str | None:
     return streamlit_module.session_state.pop("_workbench_notice", None)
 
 
+def set_workbench_generating(st_module: Any, action: str) -> None:
+    st_module.session_state["_workbench_generating"] = action
+
+
+def pop_workbench_generating(st_module: Any) -> str | None:
+    return st_module.session_state.pop("_workbench_generating", None)
+
+
 def rerun_workbench(streamlit_module: Any) -> None:
     rerun = getattr(streamlit_module, "rerun", None)
     if callable(rerun):
@@ -159,6 +167,7 @@ def copy_text_to_clipboard(
             "powershell",
             "-NoProfile",
             "-Command",
+            "[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false); "
             "[Console]::In.ReadToEnd() | Set-Clipboard",
         ]
     elif sys.platform == "darwin":
@@ -167,8 +176,14 @@ def copy_text_to_clipboard(
         return False
 
     try:
-        runner(command, input=normalized, text=True, check=True)
-    except (OSError, subprocess.SubprocessError):
+        runner(
+            command,
+            input=normalized,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+    except (OSError, UnicodeError, subprocess.SubprocessError):
         return False
     return True
 

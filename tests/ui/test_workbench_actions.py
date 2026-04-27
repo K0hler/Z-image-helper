@@ -9,11 +9,13 @@ from zprompt_helper.ui.workbench import (
     copy_text_to_clipboard,
     lock_all_blocks,
     pop_workbench_notice,
+    pop_workbench_generating,
     queue_workbench_widget_state,
     record_prompt_if_present,
     render_workbench,
-    unlock_all_blocks,
+    set_workbench_generating,
     set_workbench_notice,
+    unlock_all_blocks,
 )
 from zprompt_helper.workbench.session import EditorSession
 
@@ -104,6 +106,10 @@ class FakeStreamlit:
 
     def rerun(self) -> None:
         self.rerun_requested = True
+
+    def spinner(self, _message: str):
+        from contextlib import nullcontext
+        return nullcontext()
 
 
 class FakeSessionState(dict[str, object]):
@@ -216,11 +222,29 @@ def test_copy_text_to_clipboard_uses_local_os_clipboard(monkeypatch) -> None:
         "powershell",
         "-NoProfile",
         "-Command",
+        "[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false); "
         "[Console]::In.ReadToEnd() | Set-Clipboard",
     ]
     assert captured["kwargs"]["input"] == "robot prompt"
     assert captured["kwargs"]["text"] is True
+    assert captured["kwargs"]["encoding"] == "utf-8"
     assert captured["kwargs"]["check"] is True
+
+
+def test_copy_text_to_clipboard_accepts_unicode_prompt_text(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return subprocess.CompletedProcess(args[0], 0)
+
+    monkeypatch.setattr("sys.platform", "win32")
+    prompt_text = "robot with non-breaking hyphen \u2011 test"
+
+    assert copy_text_to_clipboard(prompt_text, runner=fake_run) is True
+    assert captured["kwargs"]["input"] == prompt_text
+    assert captured["kwargs"]["encoding"] == "utf-8"
 
 
 def test_build_generation_request_for_regenerate_excludes_locked_values_from_avoid_list() -> None:
@@ -600,3 +624,16 @@ def test_render_workbench_shows_saved_draft_indicator_when_template_has_content(
     )
 
     assert fake_st.caption_messages == ["Черновик этого шаблона сохраняется автоматически."]
+
+
+def test_workbench_generating_helpers_roundtrip() -> None:
+    fake_st = FakeStreamlit()
+    set_workbench_generating(fake_st, "generate")
+    assert pop_workbench_generating(fake_st) == "generate"
+    assert pop_workbench_generating(fake_st) is None
+
+
+def test_workbench_generating_helpers_store_regenerate() -> None:
+    fake_st = FakeStreamlit()
+    set_workbench_generating(fake_st, "regenerate")
+    assert pop_workbench_generating(fake_st) == "regenerate"
