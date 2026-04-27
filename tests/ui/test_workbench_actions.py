@@ -17,6 +17,11 @@ from zprompt_helper.ui.workbench import (
     set_workbench_notice,
     unlock_all_blocks,
 )
+from zprompt_helper.ui.workbench_panels import (
+    build_workbench_summary,
+    render_workbench_editor_panel,
+    render_workbench_output_panel,
+)
 from zprompt_helper.workbench.session import EditorSession
 
 
@@ -44,8 +49,8 @@ class FakeColumn:
     def __init__(self, streamlit: "FakeStreamlit") -> None:
         self._streamlit = streamlit
 
-    def button(self, label: str, *, key: str) -> bool:
-        return self._streamlit.button(label, key=key)
+    def button(self, label: str, *, key: str, disabled: bool = False) -> bool:
+        return self._streamlit.button(label, key=key, disabled=disabled)
 
 
 class FakeStreamlit:
@@ -98,7 +103,9 @@ class FakeStreamlit:
     def columns(self, count: int) -> list[FakeColumn]:
         return [FakeColumn(self) for _ in range(count)]
 
-    def button(self, _: str, *, key: str) -> bool:
+    def button(self, _: str, *, key: str, disabled: bool = False) -> bool:
+        if disabled:
+            return False
         return self._button_presses.get(key, False)
 
     def code(self, _: str) -> None:
@@ -637,3 +644,17 @@ def test_workbench_generating_helpers_store_regenerate() -> None:
     fake_st = FakeStreamlit()
     set_workbench_generating(fake_st, "regenerate")
     assert pop_workbench_generating(fake_st) == "regenerate"
+
+
+def test_editor_panel_disables_generate_buttons_when_generating() -> None:
+    fake_st = FakeStreamlit()
+    fake_st._button_presses = {"generate": True, "regenerate_unlocked": True}
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    session = EditorSession()
+
+    actions = render_workbench_editor_panel(
+        fake_st, template=template, session=session, generating=True
+    )
+
+    assert actions["generate"] is False
+    assert actions["regenerate"] is False

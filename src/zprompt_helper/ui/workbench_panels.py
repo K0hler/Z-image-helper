@@ -58,14 +58,19 @@ def render_workbench_editor_panel(
     *,
     template: TemplateDefinition,
     session: EditorSession,
+    generating: bool = False,
 ) -> dict[str, bool]:
     with _container(st_module, border=True, key="workbench_editor_panel"):
         _subheader(st_module, "Block editor")
 
         with _container(st_module, key="editor_gen_row"):
             col1, col2 = _columns(st_module, [1, 1])
-            generate = col1.button("Сгенерировать", key="generate")
-            regenerate = col2.button("Перегенерировать незаблокированные", key="regenerate_unlocked")
+            generate = col1.button("Сгенерировать", key="generate", disabled=generating)
+            regenerate = col2.button(
+                "Перегенерировать незаблокированные",
+                key="regenerate_unlocked",
+                disabled=generating,
+            )
 
         with _container(st_module, key="editor_ctrl_row"):
             col3, col4, col5 = _columns(st_module, [1, 1, 1])
