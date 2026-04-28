@@ -84,9 +84,10 @@ def render_workbench_editor_panel(
                 '<p class="zp-idea-label">✦ Ваша идея</p>',
                 unsafe_allow_html=True,
             )
+            if "short_idea" not in st_module.session_state:
+                st_module.session_state["short_idea"] = session.short_idea
             session.short_idea = st_module.text_area(
                 "Кратко о том, что хотите создать",
-                value=session.short_idea,
                 key="short_idea",
                 height=100,
                 label_visibility="collapsed",
@@ -104,10 +105,12 @@ def render_workbench_editor_panel(
                 key=f"lock-{template.id}-{block_id}",
                 help="Зафиксировать блок",
             )
+            block_key = f"block-{template.id}-{block_id}"
+            if block_key not in st_module.session_state:
+                st_module.session_state[block_key] = session.block_values.get(block_id, "")
             session.block_values[block_id] = st_module.text_area(
                 block.label,
-                value=session.block_values.get(block_id, ""),
-                key=f"block-{template.id}-{block_id}",
+                key=block_key,
                 label_visibility="collapsed",
             )
             if locked:
@@ -152,14 +155,6 @@ def render_workbench_output_panel(
                     key=final_prompt_key,
                     height=180,
                 )
-                if session.final_prompt:
-                    st_module.code(session.final_prompt)
-                else:
-                    _markdown(
-                        st_module,
-                        '<div class="zp-empty">Generate or rebuild to see the final prompt here.</div>',
-                        unsafe_allow_html=True,
-                    )
 
         with _container(st_module):
             col1, col2 = _columns(st_module, [1, 1])

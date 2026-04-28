@@ -296,7 +296,7 @@ def render_workbench(view_model: dict) -> None:
                     max_tokens=int(_setting(settings, "max_tokens", 700)),
                     **request,
                 )
-            apply_generated_result(
+            session = apply_generated_result(
                 session=session,
                 generated_blocks=generated,
                 block_ids=request["active_blocks"],
@@ -324,7 +324,7 @@ def render_workbench(view_model: dict) -> None:
         return
 
     if rebuild:
-        apply_generated_result(
+        session = apply_generated_result(
             session=session,
             generated_blocks={},
             block_ids=template.block_order,
