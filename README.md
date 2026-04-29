@@ -4,6 +4,8 @@ Local Streamlit workbench for building structured English prompts for Z-Image Tu
 
 The app provides built-in prompt templates, editable custom templates, OpenRouter-backed block generation, prompt history, and OS-backed API key storage through `keyring`.
 
+<img width="2408" height="1129" alt="изображение" src="https://github.com/user-attachments/assets/868f1040-a929-4b3e-8e0a-96b5f424bdab" />
+
 ## UI Overview
 
 The redesigned app uses a shared page shell with three sections:
