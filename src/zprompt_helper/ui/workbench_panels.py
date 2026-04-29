@@ -156,10 +156,10 @@ def render_workbench_output_panel(
                     height=180,
                 )
 
-        with _container(st_module):
+        with _container(st_module, key="output_action_row"):
             col1, col2 = _columns(st_module, [1, 1])
-            rebuild = col1.button("Пересобрать промт", key="rebuild_prompt")
-            copy_prompt = col2.button("Скопировать промт", key="copy_prompt")
+            copy_prompt = col1.button("Скопировать промт", key="copy_prompt")
+            rebuild = col2.button("Пересобрать промт", key="rebuild_prompt")
 
     return {
         "rebuild": rebuild,
