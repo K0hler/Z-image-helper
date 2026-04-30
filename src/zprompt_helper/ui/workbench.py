@@ -63,6 +63,23 @@ def record_prompt_if_present(history_store: Any, prompt_text: str) -> Any | None
     return history_store.append(normalized)
 
 
+def record_idea_if_present(idea_history_store: Any, idea_text: str) -> Any | None:
+    normalized = idea_text.strip()
+    if not normalized:
+        return None
+    append_if_new = getattr(idea_history_store, "append_if_new", None)
+    if callable(append_if_new):
+        return append_if_new(normalized)
+    return idea_history_store.append(normalized)
+
+
+def find_idea_history_text(entries: list[dict], entry_id: str) -> str | None:
+    for entry in entries:
+        if entry.get("id") == entry_id:
+            return str(entry.get("idea_text", "")).strip()
+    return None
+
+
 def apply_generated_result(
     session: EditorSession,
     generated_blocks: dict[str, str],
@@ -197,6 +214,8 @@ def render_workbench(view_model: dict) -> None:
     generation_service = view_model.get("generation_service")
     generation_factory = view_model.get("generation_factory")
     history_store = view_model.get("history_store")
+    idea_history_store = view_model.get("idea_history_store")
+    idea_history_entries = view_model.get("idea_history_entries", [])
     session = view_model.get("session") or st.session_state.get("workbench_session")
     if session is None:
         session = EditorSession()
@@ -250,6 +269,7 @@ def render_workbench(view_model: dict) -> None:
             template=template,
             session=session,
             generating=generating,
+            idea_history_entries=idea_history_entries,
         )
     summary = build_workbench_summary(session, active_block_count=len(active_blocks))
     with _column_scope(right_col):
@@ -269,6 +289,8 @@ def render_workbench(view_model: dict) -> None:
     lock_all = bool(actions.get("lock_all"))
     unlock_all = bool(actions.get("unlock_all"))
     copy_prompt = bool(actions.get("copy_prompt"))
+    save_idea = bool(actions.get("save_idea"))
+    use_idea_history = bool(actions.get("use_idea_history"))
 
     if generating_action:
         try:
@@ -305,6 +327,8 @@ def render_workbench(view_model: dict) -> None:
             queue_workbench_widget_state(st, template, session, request["active_blocks"])
             if history_store is not None:
                 record_prompt_if_present(history_store, session.final_prompt)
+            if idea_history_store is not None:
+                record_idea_if_present(idea_history_store, session.short_idea)
             pop_workbench_generating(st)
             set_workbench_notice(st, "Промт обновлен.")
             rerun_workbench(st)
@@ -321,6 +345,36 @@ def render_workbench(view_model: dict) -> None:
     if regenerate:
         set_workbench_generating(st, "regenerate")
         rerun_workbench(st)
+        return
+
+    if save_idea:
+        if idea_history_store is None:
+            st.error("IdeaHistoryStore is not configured.")
+        elif record_idea_if_present(idea_history_store, session.short_idea) is not None:
+            set_workbench_notice(st, "Идея сохранена в историю.")
+            rerun_workbench(st)
+        else:
+            st.error("Введите новую идею перед сохранением.")
+        return
+
+    if use_idea_history:
+        idea_text = find_idea_history_text(
+            idea_history_entries,
+            str(actions.get("selected_idea_id", "")),
+        )
+        if idea_text:
+            session.short_idea = idea_text
+            queue_workbench_widget_state(
+                st,
+                template,
+                session,
+                [],
+                extra_state={"short_idea": idea_text},
+            )
+            set_workbench_notice(st, "Идея вставлена в поле.")
+            rerun_workbench(st)
+        else:
+            st.error("Выберите запись из истории идей.")
         return
 
     if rebuild:

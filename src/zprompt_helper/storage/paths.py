@@ -8,6 +8,7 @@ class ProjectPaths:
     data_dir: Path
     templates_dir: Path
     history_dir: Path
+    idea_history_dir: Path
 
     @classmethod
     def from_root(cls, root: Path) -> "ProjectPaths":
@@ -17,8 +18,10 @@ class ProjectPaths:
             data_dir=data_dir,
             templates_dir=data_dir / "templates",
             history_dir=data_dir / "history",
+            idea_history_dir=data_dir / "idea_history",
         )
 
     def ensure(self) -> None:
         self.templates_dir.mkdir(parents=True, exist_ok=True)
         self.history_dir.mkdir(parents=True, exist_ok=True)
+        self.idea_history_dir.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from zprompt_helper.domain.models import TemplateDefinition
@@ -59,6 +60,7 @@ def render_workbench_editor_panel(
     template: TemplateDefinition,
     session: EditorSession,
     generating: bool = False,
+    idea_history_entries: list[dict] | None = None,
 ) -> dict[str, bool]:
     with _container(st_module, border=True, key="workbench_editor_panel"):
         _subheader(st_module, "Block editor")
@@ -92,6 +94,25 @@ def render_workbench_editor_panel(
                 height=100,
                 label_visibility="collapsed",
             )
+            save_idea = st_module.button(
+                "Сохранить идею",
+                key="save_idea_history",
+                disabled=generating,
+            )
+            selected_idea_id = ""
+            use_idea_history = False
+            entries = idea_history_entries or []
+            if entries:
+                with _popover(st_module, "История идей", disabled=generating):
+                    for entry in entries:
+                        entry_id = str(entry["id"])
+                        if st_module.button(
+                            _format_idea_option(entry_id, entries),
+                            key=f"use-idea-history-{entry_id}",
+                            disabled=generating,
+                        ):
+                            selected_idea_id = entry_id
+                            use_idea_history = True
         divider_fn = getattr(st_module, "divider", None)
         if callable(divider_fn):
             divider_fn()
@@ -124,6 +145,9 @@ def render_workbench_editor_panel(
         "clear_unlocked": clear_unlocked,
         "lock_all": lock_all,
         "unlock_all": unlock_all,
+        "save_idea": save_idea,
+        "use_idea_history": use_idea_history,
+        "selected_idea_id": selected_idea_id,
     }
 
 
@@ -187,6 +211,16 @@ def _container(st_module: Any, **kwargs: object):
     return nullcontext()
 
 
+def _popover(st_module: Any, label: str, **kwargs: object):
+    popover_fn = getattr(st_module, "popover", None)
+    if callable(popover_fn):
+        try:
+            return popover_fn(label, **kwargs)
+        except TypeError:
+            return popover_fn(label)
+    return _container(st_module)
+
+
 def _subheader(st_module: Any, label: str) -> None:
     getattr(st_module, "subheader", lambda *_args, **_kwargs: None)(label)
 
@@ -221,3 +255,26 @@ def _status_chip(st_module: Any, label: str, *, tone: str, icon: str) -> None:
         ),
         unsafe_allow_html=True,
     )
+
+
+def _format_idea_option(entry_id: str, entries: list[dict]) -> str:
+    if not entry_id:
+        return "Выберите идею из истории"
+    entry = next((item for item in entries if item["id"] == entry_id), None)
+    if entry is None:
+        return entry_id
+    created_at = _format_created_at(entry.get("created_at"))
+    preview = str(entry.get("idea_text", "")).strip().replace("\n", " ")
+    if len(preview) > 72:
+        preview = f"{preview[:69]}..."
+    return f"{created_at} - {preview}"
+
+
+def _format_created_at(created_at: Any) -> str:
+    try:
+        parsed = datetime.fromisoformat(str(created_at))
+    except ValueError:
+        return "Saved"
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")

@@ -464,6 +464,46 @@ div[role="radiogroup"] > label:hover {{
 [data-testid="stPopover"] > div > button {{
   background: {input_bg};
 }}
+[data-baseweb="popover"] [data-testid="stVerticalBlock"] {{
+  gap: 0.25rem !important;
+  padding: 0.45rem !important;
+}}
+[data-baseweb="popover"] [class*="st-key-use-idea-history-"] {{
+  width: 100% !important;
+  margin: 0 !important;
+}}
+[data-baseweb="popover"] [class*="st-key-use-idea-history-"] [data-testid="stButton"] {{
+  width: 100% !important;
+}}
+[data-baseweb="popover"] [class*="st-key-use-idea-history-"] button {{
+  width: 100% !important;
+  min-height: 2.4rem !important;
+  justify-content: flex-start !important;
+  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--zp-ink) !important;
+  padding: 0.55rem 0.7rem !important;
+  text-align: left !important;
+  box-shadow: none !important;
+  transform: none !important;
+}}
+[data-baseweb="popover"] [class*="st-key-use-idea-history-"] button:hover {{
+  border-color: {input_border_hover} !important;
+  background: {input_bg_hover} !important;
+  box-shadow: none !important;
+  transform: none !important;
+}}
+[data-baseweb="popover"] [class*="st-key-use-idea-history-"] button p {{
+  width: 100% !important;
+  margin: 0 !important;
+  color: var(--zp-ink) !important;
+  font-size: 0.86rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  white-space: normal !important;
+}}
 [data-testid="stCodeBlock"] pre,
 [data-testid="stCode"] {{
   background: {code_bg} !important;

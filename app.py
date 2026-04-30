@@ -9,6 +9,7 @@ from zprompt_helper.generation.service import GenerationService
 from zprompt_helper.openrouter.client import OpenRouterClient
 from zprompt_helper.services.settings_service import SettingsService
 from zprompt_helper.storage.history_store import HistoryStore
+from zprompt_helper.storage.idea_history_store import IdeaHistoryStore
 from zprompt_helper.storage.paths import ProjectPaths
 from zprompt_helper.storage.settings_store import SettingsStore
 from zprompt_helper.storage.template_store import TemplateStore
@@ -36,6 +37,8 @@ def main() -> None:
     apply_theme(theme_mode)
     history_store = HistoryStore(paths)
     history_entries = history_store.export_all()
+    idea_history_store = IdeaHistoryStore(paths)
+    idea_history_entries = idea_history_store.export_all()
     built_in_templates = load_builtin_templates()
     template_store = TemplateStore(paths)
     custom_templates = template_store.load_all()
@@ -49,6 +52,8 @@ def main() -> None:
                 "generation_factory": lambda api_key: GenerationService(OpenRouterClient(api_key)),
                 "history_store": history_store,
                 "history_entries": history_entries,
+                "idea_history_store": idea_history_store,
+                "idea_history_entries": idea_history_entries,
                 "paths": paths,
             }
         )

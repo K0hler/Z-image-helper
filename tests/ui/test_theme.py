@@ -20,6 +20,14 @@ def test_build_theme_css_supports_dark_mode_tokens() -> None:
     assert 'content: "☾"' in css
 
 
+def test_build_theme_css_styles_idea_history_rows_as_menu_items() -> None:
+    css = build_theme_css(theme_mode="dark")
+
+    assert '[class*="st-key-use-idea-history-"] button' in css
+    assert "border-radius: 10px !important" in css
+    assert "text-align: left !important" in css
+
+
 def test_normalize_theme_mode_defaults_to_light() -> None:
     assert normalize_theme_mode("unknown") == "light"
     assert normalize_theme_mode("dark") == "dark"

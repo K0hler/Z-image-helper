@@ -33,6 +33,16 @@ class FakeHistoryStore:
         self.prompts.append(prompt_text)
 
 
+class FakeIdeaHistoryStore:
+    def __init__(self) -> None:
+        self.ideas: list[str] = []
+
+    def append_if_new(self, idea_text: str) -> None:
+        normalized = idea_text.strip()
+        if normalized:
+            self.ideas.append(normalized)
+
+
 class FakeGenerationService:
     def __init__(self) -> None:
         self.calls: list[dict[str, object]] = []
@@ -72,6 +82,8 @@ class FakeStreamlit:
         self.error_messages: list[str] = []
         self.caption_messages: list[str] = []
         self.instantiated_keys: set[str] = set()
+        self.selectbox_calls: list[str] = []
+        self.button_events: list[str] = []
         self.rerun_requested = False
 
     def title(self, _: str) -> None:
@@ -86,11 +98,13 @@ class FakeStreamlit:
     def caption(self, message: str) -> None:
         self.caption_messages.append(message)
 
-    def selectbox(self, _: str, *, options: list[str], key: str) -> str:
+    def selectbox(self, label: str, *, options: list[object], key: str, **kwargs: object) -> object:
+        del label, kwargs
+        self.selectbox_calls.append(key)
         value = self.session_state.get(key, options[0])
         self.session_state[key] = value
         self.instantiated_keys.add(key)
-        return str(value)
+        return value
 
     def markdown(self, _: str, **kwargs: object) -> None:
         return None
@@ -123,9 +137,14 @@ class FakeStreamlit:
         return [FakeColumn(self) for _ in range(count)]
 
     def button(self, _: str, *, key: str, disabled: bool = False) -> bool:
+        self.button_events.append(key)
         if disabled:
             return False
         return self._button_presses.get(key, False)
+
+    def popover(self, label: str, **kwargs: object):
+        from contextlib import nullcontext
+        return nullcontext()
 
     def code(self, _: str) -> None:
         return None
@@ -221,6 +240,24 @@ def test_pending_widget_state_can_apply_lock_checkboxes() -> None:
 
     assert fake_st.session_state["lock-universal-subject"] is True
     assert fake_st.session_state["lock-universal-scene"] is False
+
+
+def test_pending_widget_state_can_apply_short_idea() -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    template = next(template for template in load_builtin_templates() if template.name == "Cinematic")
+    session = EditorSession(short_idea="idea from history")
+
+    queue_workbench_widget_state(
+        fake_st,
+        template,
+        session,
+        [],
+        extra_state={"short_idea": session.short_idea},
+    )
+    apply_pending_workbench_widget_state(fake_st)
+
+    assert fake_st.session_state["short_idea"] == "idea from history"
 
 
 def test_notice_roundtrip_uses_flash_slot() -> None:
@@ -484,6 +521,97 @@ def test_render_workbench_generate_does_not_send_old_unlocked_values(monkeypatch
 
     assert generation_service.calls[0]["current_values"] == {"shot": "close-up"}
     assert generation_service.calls[0]["locked_blocks"] == {"shot"}
+
+
+def test_render_workbench_generate_saves_short_idea_history(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {}
+    fake_st.session_state["_workbench_generating"] = "generate"
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = "rainy robot courier"
+    fake_st.session_state[f"block-{template.id}-subject"] = ""
+    fake_st.session_state[f"block-{template.id}-scene"] = ""
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+    idea_history_store = FakeIdeaHistoryStore()
+
+    render_workbench(
+        {
+            "templates": [template],
+            "generation_service": FakeGenerationService(),
+            "history_store": FakeHistoryStore(),
+            "idea_history_store": idea_history_store,
+            "settings": {
+                "model": "openai/gpt-4o-mini",
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 700,
+            },
+        }
+    )
+
+    assert idea_history_store.ideas == ["rainy robot courier"]
+
+
+def test_render_workbench_uses_selected_idea_history_entry(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {"use-idea-history-idea-1": True}
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+    fake_st.session_state["short_idea"] = ""
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+
+    render_workbench(
+        {
+            "templates": [template],
+            "history_store": FakeHistoryStore(),
+            "idea_history_entries": [
+                {
+                    "id": "idea-1",
+                    "idea_text": "saved robot idea",
+                    "created_at": "2026-04-30T10:00:00+00:00",
+                }
+            ],
+            "settings": {},
+        }
+    )
+
+    pending = fake_st.session_state["_workbench_pending_widget_state"]
+    assert pending["short_idea"] == "saved robot idea"
+    assert fake_st.rerun_requested is True
+
+
+def test_render_workbench_idea_history_uses_non_editable_entry_buttons(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.instantiated_keys = fake_st.instantiated_keys
+    fake_st._button_presses = {}
+    template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
+    fake_st.session_state["selected_template_id"] = template.name
+
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+
+    render_workbench(
+        {
+            "templates": [template],
+            "history_store": FakeHistoryStore(),
+            "idea_history_entries": [
+                {
+                    "id": "idea-1",
+                    "idea_text": "saved robot idea",
+                    "created_at": "2026-04-30T10:00:00+00:00",
+                }
+            ],
+            "settings": {},
+        }
+    )
+
+    assert "idea_history_entry" not in fake_st.selectbox_calls
+    assert "use_idea_history" not in fake_st.button_events
+    assert "use-idea-history-idea-1" in fake_st.button_events
 
 
 def test_render_workbench_clear_unlocked_updates_fields_and_keeps_locked(monkeypatch) -> None:
