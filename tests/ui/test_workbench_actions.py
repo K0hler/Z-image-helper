@@ -21,6 +21,7 @@ from zprompt_helper.ui.workbench import (
 from zprompt_helper.ui.workbench_panels import (
     build_workbench_summary,
     render_workbench_editor_panel,
+    render_workbench_header_panel,
     render_workbench_output_panel,
 )
 from zprompt_helper.workbench.session import EditorSession
@@ -789,7 +790,7 @@ def test_render_workbench_shows_new_draft_indicator_for_empty_template(monkeypat
         }
     )
 
-    assert fake_st.caption_messages == ["Новый черновик шаблона. Заполните поля или сгенерируйте промт."]
+    assert any("Новый черновик" in message for message in fake_st.caption_messages)
 
 
 def test_render_workbench_shows_saved_draft_indicator_when_template_has_content(monkeypatch) -> None:
@@ -814,7 +815,7 @@ def test_render_workbench_shows_saved_draft_indicator_when_template_has_content(
         }
     )
 
-    assert fake_st.caption_messages == ["Черновик этого шаблона сохраняется автоматически."]
+    assert any("Сохранено" in message for message in fake_st.caption_messages)
 
 
 def test_workbench_generating_helpers_roundtrip() -> None:
@@ -830,18 +831,31 @@ def test_workbench_generating_helpers_store_regenerate() -> None:
     assert pop_workbench_generating(fake_st) == "regenerate"
 
 
-def test_editor_panel_disables_generate_buttons_when_generating() -> None:
+def test_composer_and_output_disable_generation_buttons_when_generating() -> None:
     fake_st = FakeStreamlit()
     fake_st._button_presses = {"generate": True, "regenerate_unlocked": True}
     template = next(t for t in load_builtin_templates() if t.name == "Cinematic")
     session = EditorSession()
+    summary = build_workbench_summary(session, active_block_count=len(template.block_order))
 
-    actions = render_workbench_editor_panel(
-        fake_st, template=template, session=session, generating=True
+    composer_actions = render_workbench_header_panel(
+        fake_st,
+        template_names=[template.name],
+        selected_name=template.name,
+        summary=summary,
+        short_idea="",
+        generating=True,
+    )
+    output_actions = render_workbench_output_panel(
+        fake_st,
+        template=template,
+        session=session,
+        summary=summary,
+        generating=True,
     )
 
-    assert actions["generate"] is False
-    assert actions["regenerate"] is False
+    assert composer_actions["generate"] is False
+    assert output_actions["regenerate"] is False
 
 
 def test_output_panel_does_not_render_prompt_text_area_when_generating() -> None:

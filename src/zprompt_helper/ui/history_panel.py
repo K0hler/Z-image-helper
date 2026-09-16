@@ -34,43 +34,64 @@ def clear_history(history_store) -> None:
     history_store.clear_all()
 
 
-def render_history_panel(entries: list[dict], history_store=None) -> None:
+def render_history_panel(
+    entries: list[dict],
+    history_store=None,
+    *,
+    show_heading: bool = True,
+    page_size: int | None = None,
+) -> None:
     import streamlit as st
 
     summary = build_history_summary(entries)
 
-    getattr(st, "subheader", lambda *_args, **_kwargs: None)("History")
-    with _container(st, border=True):
+    if show_heading:
+        getattr(st, "subheader", lambda *_args, **_kwargs: None)("История")
+    with _container(st):
         st.caption(_build_summary_line(summary))
-        if _button(st, "Clear history", key="clear_history", use_container_width=True):
+        if _button(st, "Очистить историю", key="clear_history"):
             _handle_clear_history_request(st, history_store)
 
-    for entry in summarize_history_entries(entries):
+    ordered_entries = summarize_history_entries(entries)
+    visible_count = len(ordered_entries)
+    if page_size is not None:
+        visible_count = max(
+            page_size,
+            int(st.session_state.get("_workbench_history_visible_count", page_size)),
+        )
+    visible_entries = ordered_entries[:visible_count]
+
+    for entry in visible_entries:
         with _container(st, border=True):
-            st.caption(f"Saved {_format_created_at(entry['created_at'])}")
-            st.caption(f"Entry {entry['id']}")
-            if _button(st, "Copy prompt", key=f"copy-history-{entry['id']}", use_container_width=True):
+            st.caption(f"Сохранено {_format_created_at(entry['created_at'])}")
+            if _button(st, "Копировать", key=f"copy-history-{entry['id']}"):
                 st.session_state["copied_prompt"] = entry["prompt_text"]
-                st.success("Prompt prepared for copying.")
-            if _button(st, "Delete", key=f"delete-history-{entry['id']}", use_container_width=True):
+                st.success("Промт подготовлен для копирования.")
+            if _button(st, "Удалить", key=f"delete-history-{entry['id']}"):
                 if history_store is None:
-                    st.error("HistoryStore is not configured.")
+                    st.error("Хранилище истории не настроено.")
                 else:
                     delete_history_entry(history_store, entry)
-                    st.success("History entry deleted.")
+                    st.success("Запись удалена.")
                     st.rerun()
             st.code(entry["prompt_text"])
+
+    if page_size is not None and visible_count < len(ordered_entries):
+        st.caption(f"Показано {len(visible_entries)} из {len(ordered_entries)}")
+        if _button(st, "Показать ещё", key="show-more-history"):
+            st.session_state["_workbench_history_visible_count"] = visible_count + page_size
+            st.rerun()
 
 
 def _handle_clear_history_request(st, history_store) -> None:
     dialog = getattr(st, "dialog", None)
     if callable(dialog):
-        @dialog("Clear history")
+        @dialog("Очистить историю")
         def confirm_clear_history() -> None:
-            st.caption("This removes every saved prompt from local history.")
-            if _button(st, "Confirm clear", key="confirm-clear-history", use_container_width=True):
+            st.caption("Все сохранённые промты будут удалены из локальной истории.")
+            if _button(st, "Очистить", key="confirm-clear-history"):
                 _clear_history_with_feedback(st, history_store)
-            _button(st, "Keep history", key="cancel-clear-history", use_container_width=True)
+            _button(st, "Отмена", key="cancel-clear-history")
 
         confirm_clear_history()
         return
@@ -80,19 +101,19 @@ def _handle_clear_history_request(st, history_store) -> None:
 
 def _clear_history_with_feedback(st, history_store) -> None:
     if history_store is None:
-        st.error("HistoryStore is not configured.")
+        st.error("Хранилище истории не настроено.")
     else:
         clear_history(history_store)
-        st.success("History cleared.")
+        st.success("История очищена.")
         st.rerun()
 
 
 def _build_summary_line(summary: HistorySummary) -> str:
     if summary.total_entries == 0:
-        return "Saved 0 prompts"
+        return "Сохранённых промтов пока нет"
     if summary.latest_created_at is None:
-        return f"Saved {summary.total_entries} prompts"
-    return f"Saved {summary.total_entries} prompts. Latest: {summary.latest_created_at}"
+        return f"Сохранено промтов: {summary.total_entries}"
+    return f"Сохранено: {summary.total_entries} · последний {summary.latest_created_at}"
 
 
 def _format_created_at(created_at: Any) -> str:

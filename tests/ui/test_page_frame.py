@@ -20,7 +20,7 @@ def test_build_page_shell_state_keeps_page_metadata_and_theme_in_sync() -> None:
 
     assert state.page_id == "settings"
     assert state.theme_mode == "dark"
-    assert state.spec.label == "Settings"
+    assert state.spec.label == "Настройки"
 
 
 def test_toggle_theme_mode_flips_between_light_and_dark() -> None:

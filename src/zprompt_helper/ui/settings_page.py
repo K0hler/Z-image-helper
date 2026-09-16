@@ -76,7 +76,6 @@ def render_settings_page(
 ) -> None:
     import streamlit as st
 
-    st.header("Настройки")
     for section in build_settings_sections():
         with st.container(border=True):
             st.subheader(section["label"])

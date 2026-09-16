@@ -56,7 +56,6 @@ def render_template_manager(
 ) -> None:
     import streamlit as st
 
-    st.header("Шаблоны")
     groups = split_template_groups([*built_in_templates, *custom_templates])
     built_in_catalog = groups["built_in"]
     custom_catalog = groups["custom"]

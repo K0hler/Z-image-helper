@@ -21,19 +21,19 @@ class PageShellState:
 
 PAGE_SPECS: dict[str, PageSpec] = {
     "workbench": PageSpec(
-        label="Workbench",
-        eyebrow="Prompt Studio",
-        summary="Build, regenerate, and polish prompts without leaving the editor flow.",
+        label="Студия промтов",
+        eyebrow="Рабочая область",
+        summary="Превращайте идеи в точные и управляемые промты.",
     ),
     "template_manager": PageSpec(
-        label="Template Manager",
-        eyebrow="Template Catalog",
-        summary="Browse built-ins and manage your local custom prompt templates.",
+        label="Шаблоны",
+        eyebrow="Каталог",
+        summary="Используйте встроенные шаблоны и настраивайте свои.",
     ),
     "settings": PageSpec(
-        label="Settings",
-        eyebrow="API And App Defaults",
-        summary="Control model defaults, generation settings, and API access.",
+        label="Настройки",
+        eyebrow="Приложение",
+        summary="Управляйте API, моделью и параметрами генерации.",
     ),
 }
 
@@ -81,45 +81,35 @@ def render_page_shell(
     page_options = [item["id"] for item in nav_items]
     page_labels = {item["id"]: item["label"] for item in nav_items}
 
-    with st.container():
-        st.markdown('<div class="zp-toolbar">', unsafe_allow_html=True)
-        nav_col, theme_col = st.columns([1.0, 0.2], gap="small")
-        with nav_col:
-            st.markdown('<div class="zp-toolbar__nav">', unsafe_allow_html=True)
-            selected_page = st.radio(
-                "Page",
-                options=page_options,
-                index=page_options.index(initial_state.page_id),
-                format_func=lambda page_id: page_labels[page_id],
-                key="active_page_radio",
-                horizontal=True,
-                label_visibility="collapsed",
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
-        with theme_col:
-            st.markdown('<div class="zp-toolbar__theme">', unsafe_allow_html=True)
-            toggled = st.button(
-                "Toggle theme",
-                key="theme_toggle",
-                use_container_width=True,
-            )
-            selected_theme = toggle_theme_mode(initial_state.theme_mode) if toggled else initial_state.theme_mode
-            st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        current_state = build_page_shell_state(selected_page, selected_theme)
-        st.session_state["active_page"] = current_state.page_id
-        st.session_state["theme_mode"] = current_state.theme_mode
-        if settings_service is not None and current_state.theme_mode != initial_state.theme_mode:
-            settings_service.save_theme_mode(current_state.theme_mode)
-        st.markdown(
-            (
-                '<section class="zp-page-shell">'
-                f'<p class="zp-page-shell__eyebrow">{current_state.spec.eyebrow}</p>'
-                f'<h1 class="zp-page-shell__title">{current_state.spec.label}</h1>'
-                f'<p class="zp-page-shell__summary">{current_state.spec.summary}</p>'
-                "</section>"
-            ),
-            unsafe_allow_html=True,
+    with st.sidebar:
+        st.markdown("## Z · PROMPT")
+        st.caption("Локальная студия")
+        selected_page = st.radio(
+            "Навигация",
+            options=page_options,
+            index=page_options.index(initial_state.page_id),
+            format_func=lambda page_id: page_labels[page_id],
+            key="active_page_radio",
+            label_visibility="collapsed",
         )
+        toggled = st.button(
+            "Светлая тема" if initial_state.theme_mode == "dark" else "Тёмная тема",
+            key="theme_toggle",
+            icon=":material/light_mode:" if initial_state.theme_mode == "dark" else ":material/dark_mode:",
+            use_container_width=True,
+        )
+        st.caption("Готов к работе")
+
+    selected_theme = toggle_theme_mode(initial_state.theme_mode) if toggled else initial_state.theme_mode
+    current_state = build_page_shell_state(selected_page, selected_theme)
+    st.session_state["active_page"] = current_state.page_id
+    st.session_state["theme_mode"] = current_state.theme_mode
+    if settings_service is not None and current_state.theme_mode != initial_state.theme_mode:
+        settings_service.save_theme_mode(current_state.theme_mode)
+    if toggled:
+        st.rerun()
+
+    st.title(current_state.spec.label)
+    st.caption(current_state.spec.summary)
 
     return current_state.page_id, current_state.theme_mode

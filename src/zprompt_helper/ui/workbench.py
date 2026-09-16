@@ -13,7 +13,6 @@ from zprompt_helper.ui.workbench_panels import (
 from zprompt_helper.workbench.session import (
     EditorSession,
     activate_template,
-    current_template_has_meaningful_draft,
     merge_generated_blocks,
     rebuild_prompt,
 )
@@ -287,6 +286,7 @@ def render_workbench(view_model: dict) -> None:
     generation_service = view_model.get("generation_service")
     generation_factory = view_model.get("generation_factory")
     history_store = view_model.get("history_store")
+    history_entries = view_model.get("history_entries", [])
     idea_history_store = view_model.get("idea_history_store")
     idea_history_entries = view_model.get("idea_history_entries", [])
     session = view_model.get("session") or st.session_state.get("workbench_session")
@@ -294,7 +294,6 @@ def render_workbench(view_model: dict) -> None:
         session = EditorSession()
     st.session_state["workbench_session"] = session
 
-    st.title("Z-Prompt-Helper")
     notice = pop_workbench_notice(st)
     if notice:
         _notify_success(st, notice)
@@ -310,35 +309,32 @@ def render_workbench(view_model: dict) -> None:
     template = template_by_name.get(selected_name, next(iter(template_by_name.values())))
     activate_template(session, template.id)
     apply_pending_workbench_widget_state(st)
-    active_blocks = enabled_block_ids(template)
-    summary = build_workbench_summary(session, active_block_count=len(active_blocks))
-    selected_name = render_workbench_header_panel(
-        st,
-        template_names=list(template_by_name),
-        selected_name=template.name,
-        summary=summary,
-        short_idea=session.short_idea,
-    )
-    template = template_by_name[selected_name]
-    activate_template(session, template.id)
-    apply_pending_workbench_widget_state(st)
-
     generating_action = st.session_state.get("_workbench_generating")
     generating = bool(generating_action)
-
-    if current_template_has_meaningful_draft(session):
-        st.caption("Черновик этого шаблона сохраняется автоматически.")
-    else:
-        st.caption("Новый черновик шаблона. Заполните поля или сгенерируйте промт.")
+    active_blocks = enabled_block_ids(template)
+    summary = build_workbench_summary(session, active_block_count=len(active_blocks))
 
     left_col, right_col = _columns(st, [1.45, 1.0])
     with _column_scope(left_col):
+        composer_actions = render_workbench_header_panel(
+            st,
+            template_names=list(template_by_name),
+            selected_name=template.name,
+            summary=summary,
+            short_idea=session.short_idea,
+            generating=generating,
+            idea_history_entries=idea_history_entries,
+        )
+        session.short_idea = str(composer_actions["short_idea"])
+        template = template_by_name[str(composer_actions["selected_name"])]
+        activate_template(session, template.id)
+        apply_pending_workbench_widget_state(st)
+        active_blocks = enabled_block_ids(template)
         editor_actions = render_workbench_editor_panel(
             st,
             template=template,
             session=session,
             generating=generating,
-            idea_history_entries=idea_history_entries,
         )
     summary = build_workbench_summary(session, active_block_count=len(active_blocks))
     with _column_scope(right_col):
@@ -348,9 +344,11 @@ def render_workbench(view_model: dict) -> None:
             template=template,
             summary=summary,
             generating=generating,
+            history_entries=history_entries,
+            history_store=history_store,
         )
 
-    actions = editor_actions | output_actions
+    actions = composer_actions | editor_actions | output_actions
     generate = _action_flag(actions, "generate")
     regenerate = _action_flag(actions, "regenerate")
     rebuild = _action_flag(actions, "rebuild")

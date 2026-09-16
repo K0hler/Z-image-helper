@@ -152,7 +152,11 @@ def test_render_history_panel_shows_metadata_before_prompt_content(monkeypatch) 
         [{"id": "1", "prompt_text": "robot prompt", "created_at": "2026-04-24T10:00:00+00:00"}]
     )
 
-    metadata_index = next(i for i, event in enumerate(fake_st.events) if event.startswith("caption:Saved "))
+    metadata_index = next(
+        i
+        for i, event in enumerate(fake_st.events)
+        if event.startswith("caption:Сохранено ")
+    )
     prompt_index = fake_st.events.index("code:robot prompt")
     assert metadata_index < prompt_index
 
@@ -186,6 +190,24 @@ def test_render_history_panel_clear_flow_uses_confirmation_dialog_when_available
         history_store=store,
     )
 
-    assert fake_st.dialog_calls == ["Clear history"]
+    assert fake_st.dialog_calls == ["Очистить историю"]
     assert store.clear_count == 1
     assert fake_st.rerun_requested is True
+
+
+def test_render_history_panel_limits_initial_workbench_history(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    monkeypatch.setitem(sys.modules, "streamlit", fake_st)
+    entries = [
+        {
+            "id": str(index),
+            "prompt_text": f"prompt {index}",
+            "created_at": f"2026-04-{index + 1:02d}T10:00:00+00:00",
+        }
+        for index in range(10)
+    ]
+
+    render_history_panel(entries, page_size=3)
+
+    assert len([event for event in fake_st.events if event.startswith("code:")]) == 3
+    assert "button:Показать ещё:show-more-history" in fake_st.events

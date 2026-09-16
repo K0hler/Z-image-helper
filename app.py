@@ -24,17 +24,21 @@ from zprompt_helper.ui.workbench import render_workbench
 def main() -> None:
     import streamlit as st
 
-    st.set_page_config(page_title="Z-Prompt-Helper", layout="wide")
+    st.set_page_config(
+        page_title="Z-Prompt-Helper",
+        page_icon=":material/auto_awesome:",
+        layout="wide",
+    )
     paths = ProjectPaths.from_root(ROOT)
     settings_service = SettingsService(SettingsStore(paths), KeyringSecretStore())
     settings_vm = asdict(settings_service.load())
     st.session_state.setdefault("theme_mode", settings_vm.get("theme_mode", "light"))
-    page, theme_mode = render_page_shell(
+    apply_theme(st.session_state.get("theme_mode"))
+    page, _ = render_page_shell(
         normalize_page_id(st.session_state.get("active_page")),
         st.session_state.get("theme_mode"),
         settings_service=settings_service,
     )
-    apply_theme(theme_mode)
     history_store = HistoryStore(paths)
     history_entries = history_store.export_all()
     idea_history_store = IdeaHistoryStore(paths)
