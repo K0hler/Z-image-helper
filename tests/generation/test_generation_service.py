@@ -562,7 +562,7 @@ def test_top_level_error_in_response_body_is_surfaced() -> None:
         _generate(service)
 
     message = str(exc_info.value)
-    assert "OpenRouter returned an error" in message
+    assert "API returned an error" in message
     assert "Insufficient credits" in message
 
 

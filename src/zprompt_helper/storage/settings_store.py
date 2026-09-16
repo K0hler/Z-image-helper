@@ -2,11 +2,13 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from zprompt_helper.openrouter.client import DEFAULT_BASE_URL
 from zprompt_helper.storage.paths import ProjectPaths
 
 
 class SettingsPayload(BaseModel):
     model: str = ""
+    base_url: str = DEFAULT_BASE_URL
     temperature: float = 0.2
     top_p: float = 0.9
     max_tokens: int = 700

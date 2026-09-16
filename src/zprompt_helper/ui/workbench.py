@@ -19,17 +19,21 @@ from zprompt_helper.workbench.session import (
 )
 
 
+def enabled_block_ids(template: TemplateDefinition) -> list[str]:
+    return [
+        block_id
+        for block_id in template.block_order
+        if template.blocks[block_id].enabled
+    ]
+
+
 def build_generation_request(
     template: TemplateDefinition,
     session: EditorSession,
     regenerate_unlocked: bool = False,
     variation_index: int = 0,
 ) -> dict[str, Any]:
-    active_blocks = [
-        block_id
-        for block_id in template.block_order
-        if template.blocks[block_id].enabled
-    ]
+    active_blocks = enabled_block_ids(template)
     return {
         "short_idea": session.short_idea,
         "active_blocks": active_blocks,
@@ -125,6 +129,13 @@ def unlock_all_blocks(session: EditorSession) -> EditorSession:
     return session
 
 
+def enabled_lock_widget_state(template: TemplateDefinition, locked: bool) -> dict[str, bool]:
+    return {
+        f"lock-{template.id}-{block_id}": locked
+        for block_id in enabled_block_ids(template)
+    }
+
+
 def queue_workbench_widget_state(
     streamlit_module: Any,
     template: TemplateDefinition,
@@ -205,6 +216,68 @@ def copy_text_to_clipboard(
     return True
 
 
+def _action_flag(actions: dict[str, Any], name: str) -> bool:
+    return bool(actions.get(name))
+
+
+def _complete_generation_action(
+    st_module: Any,
+    *,
+    action: str,
+    template: TemplateDefinition,
+    session: EditorSession,
+    settings: Any,
+    settings_service: Any,
+    generation_service: Any,
+    generation_factory: Any,
+    history_store: Any,
+    idea_history_store: Any,
+) -> None:
+    try:
+        if settings_service is not None:
+            settings = settings_service.load()
+        service = generation_service or _build_generation_service(
+            generation_factory,
+            _setting(settings, "api_key", ""),
+            _setting(settings, "base_url", "https://openrouter.ai/api/v1"),
+        )
+        if action == "regenerate":
+            session.variation_index += 1
+        else:
+            session.variation_index = 0
+        request = build_generation_request(
+            template,
+            session,
+            regenerate_unlocked=(action == "regenerate"),
+            variation_index=session.variation_index,
+        )
+        with _spinner(st_module, "Генерирую промт…"):
+            generated = service.generate_blocks(
+                model=_setting(settings, "model", ""),
+                temperature=float(_setting(settings, "temperature", 0.2)),
+                top_p=float(_setting(settings, "top_p", 0.9)),
+                max_tokens=int(_setting(settings, "max_tokens", 700)),
+                **request,
+            )
+        apply_generated_result(
+            session=session,
+            generated_blocks=generated,
+            block_ids=request["active_blocks"],
+            formula=template.assembly_formula,
+        )
+        queue_workbench_widget_state(st_module, template, session, request["active_blocks"])
+        if history_store is not None:
+            record_prompt_if_present(history_store, session.final_prompt)
+        if idea_history_store is not None:
+            record_idea_if_present(idea_history_store, session.short_idea)
+        pop_workbench_generating(st_module)
+        set_workbench_notice(st_module, "Промт обновлен.")
+        rerun_workbench(st_module)
+    except Exception as error:
+        pop_workbench_generating(st_module)
+        st_module.error(f"Не удалось сгенерировать промт: {error}")
+
+
 def render_workbench(view_model: dict) -> None:
     import streamlit as st
 
@@ -237,11 +310,7 @@ def render_workbench(view_model: dict) -> None:
     template = template_by_name.get(selected_name, next(iter(template_by_name.values())))
     activate_template(session, template.id)
     apply_pending_workbench_widget_state(st)
-    active_blocks = [
-        block_id
-        for block_id in template.block_order
-        if template.blocks[block_id].enabled
-    ]
+    active_blocks = enabled_block_ids(template)
     summary = build_workbench_summary(session, active_block_count=len(active_blocks))
     selected_name = render_workbench_header_panel(
         st,
@@ -282,60 +351,29 @@ def render_workbench(view_model: dict) -> None:
         )
 
     actions = editor_actions | output_actions
-    generate = bool(actions.get("generate"))
-    regenerate = bool(actions.get("regenerate"))
-    rebuild = bool(actions.get("rebuild"))
-    clear_unlocked = bool(actions.get("clear_unlocked"))
-    lock_all = bool(actions.get("lock_all"))
-    unlock_all = bool(actions.get("unlock_all"))
-    copy_prompt = bool(actions.get("copy_prompt"))
-    save_idea = bool(actions.get("save_idea"))
-    use_idea_history = bool(actions.get("use_idea_history"))
+    generate = _action_flag(actions, "generate")
+    regenerate = _action_flag(actions, "regenerate")
+    rebuild = _action_flag(actions, "rebuild")
+    clear_unlocked = _action_flag(actions, "clear_unlocked")
+    lock_all = _action_flag(actions, "lock_all")
+    unlock_all = _action_flag(actions, "unlock_all")
+    copy_prompt = _action_flag(actions, "copy_prompt")
+    save_idea = _action_flag(actions, "save_idea")
+    use_idea_history = _action_flag(actions, "use_idea_history")
 
     if generating_action:
-        try:
-            if settings_service is not None:
-                settings = settings_service.load()
-            service = generation_service or _build_generation_service(
-                generation_factory,
-                _setting(settings, "api_key", ""),
-            )
-            if generating_action == "regenerate":
-                session.variation_index += 1
-            else:
-                session.variation_index = 0
-            request = build_generation_request(
-                template,
-                session,
-                regenerate_unlocked=(generating_action == "regenerate"),
-                variation_index=session.variation_index,
-            )
-            with _spinner(st, "Генерирую промт…"):
-                generated = service.generate_blocks(
-                    model=_setting(settings, "model", ""),
-                    temperature=float(_setting(settings, "temperature", 0.2)),
-                    top_p=float(_setting(settings, "top_p", 0.9)),
-                    max_tokens=int(_setting(settings, "max_tokens", 700)),
-                    **request,
-                )
-            session = apply_generated_result(
-                session=session,
-                generated_blocks=generated,
-                block_ids=request["active_blocks"],
-                formula=template.assembly_formula,
-            )
-            queue_workbench_widget_state(st, template, session, request["active_blocks"])
-            if history_store is not None:
-                record_prompt_if_present(history_store, session.final_prompt)
-            if idea_history_store is not None:
-                record_idea_if_present(idea_history_store, session.short_idea)
-            pop_workbench_generating(st)
-            set_workbench_notice(st, "Промт обновлен.")
-            rerun_workbench(st)
-            return
-        except Exception as error:
-            pop_workbench_generating(st)
-            st.error(f"Не удалось сгенерировать промт: {error}")
+        _complete_generation_action(
+            st,
+            action=str(generating_action),
+            template=template,
+            session=session,
+            settings=settings,
+            settings_service=settings_service,
+            generation_service=generation_service,
+            generation_factory=generation_factory,
+            history_store=history_store,
+            idea_history_store=idea_history_store,
+        )
         return
 
     if generate:
@@ -405,11 +443,7 @@ def render_workbench(view_model: dict) -> None:
             template,
             session,
             [],
-            extra_state={
-                f"lock-{template.id}-{block_id}": True
-                for block_id in template.block_order
-                if template.blocks[block_id].enabled
-            },
+            extra_state=enabled_lock_widget_state(template, True),
         )
         set_workbench_notice(st, "Все блоки заблокированы.")
         rerun_workbench(st)
@@ -422,11 +456,7 @@ def render_workbench(view_model: dict) -> None:
             template,
             session,
             [],
-            extra_state={
-                f"lock-{template.id}-{block_id}": False
-                for block_id in template.block_order
-                if template.blocks[block_id].enabled
-            },
+            extra_state=enabled_lock_widget_state(template, False),
         )
         set_workbench_notice(st, "Все блоки разблокированы.")
         rerun_workbench(st)
@@ -439,13 +469,20 @@ def render_workbench(view_model: dict) -> None:
             st.error("Не удалось скопировать промт в буфер обмена.")
 
 
-def _build_generation_service(generation_factory: Any, api_key: str) -> Any:
+def _build_generation_service(
+    generation_factory: Any,
+    api_key: str,
+    base_url: str,
+) -> Any:
     normalized_key = api_key.strip()
+    normalized_url = base_url.strip().rstrip("/")
     if generation_factory is None:
         raise ValueError("generation_factory is not configured")
     if not normalized_key:
-        raise ValueError("OpenRouter API key is required in Settings")
-    return generation_factory(normalized_key)
+        raise ValueError("API key is required in Settings")
+    if not normalized_url:
+        raise ValueError("Base URL is required in Settings")
+    return generation_factory(normalized_key, normalized_url)
 
 
 def _setting(settings: Any, name: str, default: Any) -> Any:

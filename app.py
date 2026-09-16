@@ -49,7 +49,9 @@ def main() -> None:
             {
                 "templates": templates,
                 "settings_service": settings_service,
-                "generation_factory": lambda api_key: GenerationService(OpenRouterClient(api_key)),
+                "generation_factory": lambda api_key, base_url: GenerationService(
+                    OpenRouterClient(api_key, base_url)
+                ),
                 "history_store": history_store,
                 "history_entries": history_entries,
                 "idea_history_store": idea_history_store,

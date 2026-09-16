@@ -212,12 +212,12 @@ class GenerationService:
     def _extract_content(response: dict) -> str:
         top_error = response.get("error") if isinstance(response, dict) else None
         if top_error:
-            raise ValueError(f"OpenRouter returned an error in the response body: {top_error!r}")
+            raise ValueError(f"API returned an error in the response body: {top_error!r}")
 
         choices = response.get("choices") if isinstance(response, dict) else None
         if not choices:
             raise ValueError(
-                "OpenRouter returned no choices. Full response: "
+                "API returned no choices. Full response: "
                 f"{GenerationService._response_dump(response)}"
             )
 
@@ -258,11 +258,10 @@ class GenerationService:
                 "Model produced 0 completion tokens — "
                 f"provider {provider!r} on model {model_id!r} did not generate any output. "
                 "This usually means the free/upstream provider is unavailable or rejected the prompt. "
-                "Switch to a different model in Settings (e.g. openai/gpt-4o-mini, "
-                "anthropic/claude-3.5-haiku, google/gemini-2.0-flash-exp)."
+                "Switch to a different model in Settings."
             )
         raise ValueError(
-            "Model returned an empty response. Full OpenRouter response: "
+            "Model returned an empty response. Full API response: "
             f"{GenerationService._response_dump(response)}"
         )
 

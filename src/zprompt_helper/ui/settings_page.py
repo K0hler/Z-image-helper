@@ -1,10 +1,14 @@
 from typing import Protocol
 
-from zprompt_helper.openrouter.client import OpenRouterClient
+from zprompt_helper.openrouter.client import (
+    DEFAULT_BASE_URL,
+    OpenRouterClient,
+    normalize_base_url,
+)
 
 
-class OpenRouterConnectionClient(Protocol):
-    def create_chat_completion(self, payload: dict) -> dict:
+class ModelCatalogClient(Protocol):
+    def list_models(self) -> list[str]:
         ...
 
 
@@ -22,10 +26,12 @@ def normalize_settings_form(
     top_p: float,
     max_tokens: int,
     api_key: str,
+    base_url: str = DEFAULT_BASE_URL,
     theme_mode: str = "light",
 ) -> dict:
     return {
         "model": model.strip(),
+        "base_url": normalize_base_url(base_url),
         "temperature": float(temperature),
         "top_p": float(top_p),
         "max_tokens": int(max_tokens),
@@ -41,34 +47,26 @@ def save_settings_from_form(settings_service, form: dict) -> dict:
         top_p=form.get("top_p", 0.9),
         max_tokens=form.get("max_tokens", 700),
         api_key=form.get("api_key", ""),
+        base_url=form.get("base_url", DEFAULT_BASE_URL),
         theme_mode=form.get("theme_mode", "light"),
     )
     settings_service.save(**normalized)
     return normalized
 
 
-def validate_connection(client: OpenRouterConnectionClient, model: str) -> bool:
-    payload = {
-        "messages": [{"role": "user", "content": "ping"}],
-        "max_tokens": 1,
-    }
-    normalized_model = model.strip()
-    if normalized_model:
-        payload["model"] = normalized_model
-
-    response = client.create_chat_completion(payload)
-    return bool(response.get("choices"))
-
-
-def validate_settings_connection(
+def fetch_available_models(
     api_key: str,
-    model: str,
+    base_url: str,
     client_factory=OpenRouterClient,
-) -> bool:
+) -> list[str]:
     normalized_key = api_key.strip()
     if not normalized_key:
-        raise ValueError("OpenRouter API key is required")
-    return validate_connection(client_factory(normalized_key), model)
+        raise ValueError("API key is required")
+    normalized_url = normalize_base_url(base_url)
+    models = client_factory(normalized_key, normalized_url).list_models()
+    if not models:
+        raise ValueError("API returned no available models")
+    return models
 
 
 def render_settings_page(
@@ -83,20 +81,50 @@ def render_settings_page(
         with st.container(border=True):
             st.subheader(section["label"])
             if section["id"] == "api":
-                st.caption("Store the API key in the OS keyring, not in project files.")
+                st.caption(
+                    "Use an OpenAI-compatible API base URL. The API key stays in the OS keyring."
+                )
             elif section["id"] == "model":
-                st.caption("Use model defaults for generation requests across the workbench.")
+                st.caption("Load available models from the service, then choose the default.")
             else:
                 st.caption("Tune generation behavior without editing templates.")
 
     with st.form("settings-form"):
         api_key = st.text_input(
-            "OpenRouter API Key",
+            "API Key",
             value=settings.get("api_key", ""),
             type="password",
             key="api_key",
         )
-        model = st.text_input("Модель", value=settings.get("model", ""), key="model")
+        base_url = st.text_input(
+            "Base URL",
+            value=settings.get("base_url", DEFAULT_BASE_URL),
+            key="base_url",
+            help="Корневой URL OpenAI-совместимого API, например http://localhost:1234/v1",
+        )
+        normalized_url = base_url.strip().rstrip("/")
+        available_models = st.session_state.get("available_models", [])
+        catalog_matches = (
+            isinstance(available_models, list)
+            and bool(available_models)
+            and st.session_state.get("available_models_base_url") == normalized_url
+        )
+        if catalog_matches:
+            current_model = str(
+                st.session_state.get("model", settings.get("model", ""))
+            ).strip()
+            selected_model = str(st.session_state.get("model_from_catalog", ""))
+            if selected_model not in available_models:
+                st.session_state["model_from_catalog"] = (
+                    current_model if current_model in available_models else available_models[0]
+                )
+            model = st.selectbox(
+                "Модель",
+                options=available_models,
+                key="model_from_catalog",
+            )
+        else:
+            model = st.text_input("Модель", value=settings.get("model", ""), key="model")
         temperature = st.number_input(
             "Temperature",
             min_value=0.0,
@@ -119,15 +147,37 @@ def render_settings_page(
             key="max_tokens",
         )
         submitted = st.form_submit_button("Сохранить", key="settings-form")
+        fetch_models = st.form_submit_button(
+            "Проверить и загрузить модели",
+            key="fetch_models",
+        )
 
     form = {
         "model": model,
+        "base_url": base_url,
         "temperature": temperature,
         "top_p": top_p,
         "max_tokens": max_tokens,
         "api_key": api_key,
         "theme_mode": str(st.session_state.get("theme_mode", settings.get("theme_mode", "light"))),
     }
+    if fetch_models:
+        try:
+            with _spinner(st, "Проверяю сервис и загружаю модели..."):
+                models = fetch_available_models(api_key, base_url, client_factory)
+            normalized_url = normalize_base_url(base_url)
+            current_model = str(model).strip()
+            st.session_state["available_models"] = models
+            st.session_state["available_models_base_url"] = normalized_url
+            st.session_state["model_from_catalog"] = (
+                current_model if current_model in models else models[0]
+            )
+            _notify_success(st, f"Сервис доступен. Загружено моделей: {len(models)}.")
+            st.rerun()
+        except Exception as error:
+            st.error(f"Не удалось загрузить модели: {error}")
+        return
+
     if submitted:
         if settings_service is None:
             st.error("SettingsService is not configured.")
@@ -137,16 +187,6 @@ def render_settings_page(
                 st.success("Настройки сохранены.")
             except Exception as error:
                 st.error(f"Не удалось сохранить настройки: {error}")
-    if st.button("Проверить ключ", key="validate_api_key"):
-        try:
-            with _spinner(st, "Validating OpenRouter key..."):
-                is_valid = validate_settings_connection(api_key, model, client_factory)
-            if is_valid:
-                _notify_success(st, "OpenRouter connection works.")
-            else:
-                st.error("OpenRouter did not return a valid response.")
-        except Exception as error:
-            st.error(f"Не удалось проверить ключ: {error}")
 
 
 def _spinner(st_module, message: str):

@@ -1,20 +1,20 @@
 from zprompt_helper.ui.settings_page import (
     build_settings_sections,
+    fetch_available_models,
     normalize_settings_form,
     render_settings_page,
     save_settings_from_form,
-    validate_connection,
-    validate_settings_connection,
 )
 
 
 class FakeClient:
-    def __init__(self) -> None:
-        self.payloads: list[dict] = []
+    def __init__(self, models: list[str] | None = None) -> None:
+        self.models = models or ["alpha-model", "zeta-model"]
+        self.list_models_calls = 0
 
-    def create_chat_completion(self, payload: dict) -> dict:
-        self.payloads.append(payload)
-        return {"choices": [{"message": {"content": "ok"}}]}
+    def list_models(self) -> list[str]:
+        self.list_models_calls += 1
+        return self.models
 
 
 class FakeSettingsService:
@@ -59,6 +59,8 @@ class FakeStreamlit:
         self.toasts: list[str] = []
         self.button_presses: dict[str, bool] = {}
         self.form_submits: dict[str, bool] = {}
+        self.selectbox_options: list[list[str]] = []
+        self.reruns = 0
         self.toast = self._toast
 
     def header(self, _: str) -> None:
@@ -87,6 +89,11 @@ class FakeStreamlit:
     def number_input(self, _: str, *, value, key: str, **__: object):
         return self.session_state.get(key, value)
 
+    def selectbox(self, _: str, *, options, key: str, **__: object) -> str:
+        normalized_options = list(options)
+        self.selectbox_options.append(normalized_options)
+        return str(self.session_state.get(key, normalized_options[0]))
+
     def form_submit_button(self, _: str, *, key: str | None = None, **__: object) -> bool:
         submit_key = key or self.forms[-1]
         return self.form_submits.get(submit_key, False)
@@ -107,6 +114,9 @@ class FakeStreamlit:
     def _toast(self, message: str, **__: object) -> None:
         self.toasts.append(message)
 
+    def rerun(self) -> None:
+        self.reruns += 1
+
 
 def test_normalize_settings_form_strips_whitespace_from_model_name() -> None:
     normalized = normalize_settings_form(
@@ -115,9 +125,11 @@ def test_normalize_settings_form_strips_whitespace_from_model_name() -> None:
         top_p=0.9,
         max_tokens=700,
         api_key="sk-demo",
+        base_url=" https://api.example.test/v1/ ",
     )
 
     assert normalized["model"] == "openai/gpt-4o-mini"
+    assert normalized["base_url"] == "https://api.example.test/v1"
 
 
 def test_normalize_settings_form_strips_api_key_and_coerces_numbers() -> None:
@@ -127,6 +139,7 @@ def test_normalize_settings_form_strips_api_key_and_coerces_numbers() -> None:
         top_p="0.8",
         max_tokens="512",
         api_key=" sk-demo ",
+        base_url=" https://api.example.test/v1/ ",
     )
 
     assert normalized == {
@@ -135,22 +148,30 @@ def test_normalize_settings_form_strips_api_key_and_coerces_numbers() -> None:
         "top_p": 0.8,
         "max_tokens": 512,
         "api_key": "sk-demo",
+        "base_url": "https://api.example.test/v1",
         "theme_mode": "light",
     }
 
 
-def test_validate_connection_omits_model_when_blank() -> None:
-    client = FakeClient()
+def test_fetch_available_models_builds_client_with_key_and_base_url() -> None:
+    clients: list[FakeClient] = []
+    connections: list[tuple[str, str]] = []
 
-    assert validate_connection(client, "  ") is True
-    assert "model" not in client.payloads[0]
+    def factory(api_key: str, base_url: str) -> FakeClient:
+        connections.append((api_key, base_url))
+        client = FakeClient(["zeta-model", "alpha-model"])
+        clients.append(client)
+        return client
 
+    models = fetch_available_models(
+        " sk-demo ",
+        " https://api.example.test/v1/ ",
+        factory,
+    )
 
-def test_validate_connection_includes_model_when_set() -> None:
-    client = FakeClient()
-
-    assert validate_connection(client, "openai/gpt-4o-mini") is True
-    assert client.payloads[0]["model"] == "openai/gpt-4o-mini"
+    assert models == ["zeta-model", "alpha-model"]
+    assert connections == [("sk-demo", "https://api.example.test/v1")]
+    assert clients[0].list_models_calls == 1
 
 
 def test_save_settings_from_form_normalizes_and_calls_service() -> None:
@@ -164,6 +185,7 @@ def test_save_settings_from_form_normalizes_and_calls_service() -> None:
             "top_p": "0.8",
             "max_tokens": "512",
             "api_key": " sk-demo ",
+            "base_url": " https://api.example.test/v1/ ",
         },
     )
 
@@ -174,23 +196,9 @@ def test_save_settings_from_form_normalizes_and_calls_service() -> None:
         "top_p": 0.8,
         "max_tokens": 512,
         "api_key": "sk-demo",
+        "base_url": "https://api.example.test/v1",
         "theme_mode": "light",
     }
-
-
-def test_validate_settings_connection_builds_client_with_api_key() -> None:
-    clients: list[FakeClient] = []
-    keys: list[str] = []
-
-    def factory(api_key: str) -> FakeClient:
-        keys.append(api_key)
-        client = FakeClient()
-        clients.append(client)
-        return client
-
-    assert validate_settings_connection(" sk-demo ", "openai/gpt-4o-mini", factory)
-    assert keys == ["sk-demo"]
-    assert clients[0].payloads[0]["model"] == "openai/gpt-4o-mini"
 
 
 def test_build_settings_sections_returns_expected_groups() -> None:
@@ -204,6 +212,7 @@ def test_render_settings_page_saves_through_single_grouped_form(monkeypatch) -> 
     fake_st.session_state.update(
         {
             "api_key": " sk-demo ",
+            "base_url": " https://api.example.test/v1/ ",
             "model": " openai/gpt-4o-mini ",
             "temperature": "0.3",
             "top_p": "0.8",
@@ -230,31 +239,37 @@ def test_render_settings_page_saves_through_single_grouped_form(monkeypatch) -> 
             "top_p": 0.8,
             "max_tokens": 512,
             "api_key": "sk-demo",
+            "base_url": "https://api.example.test/v1",
             "theme_mode": "dark",
         }
     ]
 
 
-def test_render_settings_page_uses_spinner_and_transient_feedback_for_validation(monkeypatch) -> None:
+def test_render_settings_page_fetches_models_and_preselects_current_model(monkeypatch) -> None:
     fake_st = FakeStreamlit()
     fake_st.session_state.update(
         {
             "api_key": "sk-demo",
-            "model": "openai/gpt-4o-mini",
+            "base_url": "https://api.example.test/v1",
+            "model": "alpha-model",
         }
     )
-    fake_st.button_presses["validate_api_key"] = True
+    fake_st.form_submits["fetch_models"] = True
 
     monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
 
     render_settings_page(
         settings={},
-        client_factory=lambda _: FakeClient(),
+        client_factory=lambda _key, _url: FakeClient(["alpha-model", "zeta-model"]),
     )
 
-    assert fake_st.spinner_messages == ["Validating OpenRouter key..."]
-    assert fake_st.toasts == ["OpenRouter connection works."]
+    assert fake_st.spinner_messages == ["Проверяю сервис и загружаю модели..."]
+    assert fake_st.toasts == ["Сервис доступен. Загружено моделей: 2."]
     assert fake_st.errors == []
+    assert fake_st.session_state["available_models"] == ["alpha-model", "zeta-model"]
+    assert fake_st.session_state["available_models_base_url"] == "https://api.example.test/v1"
+    assert fake_st.session_state["model_from_catalog"] == "alpha-model"
+    assert fake_st.reruns == 1
 
 
 def test_render_settings_page_falls_back_to_success_when_toast_is_unavailable(monkeypatch) -> None:
@@ -262,17 +277,43 @@ def test_render_settings_page_falls_back_to_success_when_toast_is_unavailable(mo
     fake_st.session_state.update(
         {
             "api_key": "sk-demo",
-            "model": "openai/gpt-4o-mini",
+            "base_url": "https://api.example.test/v1",
+            "model": "alpha-model",
         }
     )
-    fake_st.button_presses["validate_api_key"] = True
+    fake_st.form_submits["fetch_models"] = True
     delattr(fake_st, "toast")
 
     monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
 
     render_settings_page(
         settings={},
-        client_factory=lambda _: FakeClient(),
+        client_factory=lambda _key, _url: FakeClient(["alpha-model"]),
     )
 
-    assert fake_st.successes == ["OpenRouter connection works."]
+    assert fake_st.successes == ["Сервис доступен. Загружено моделей: 1."]
+
+
+def test_render_settings_page_saves_model_selected_from_catalog(monkeypatch) -> None:
+    fake_st = FakeStreamlit()
+    fake_st.session_state.update(
+        {
+            "api_key": "sk-demo",
+            "base_url": "https://api.example.test/v1",
+            "available_models": ["alpha-model", "zeta-model"],
+            "available_models_base_url": "https://api.example.test/v1",
+            "model_from_catalog": "zeta-model",
+            "temperature": 0.3,
+            "top_p": 0.8,
+            "max_tokens": 512,
+            "theme_mode": "dark",
+        }
+    )
+    fake_st.form_submits["settings-form"] = True
+    monkeypatch.setitem(__import__("sys").modules, "streamlit", fake_st)
+    service = FakeSettingsService()
+
+    render_settings_page(settings={}, settings_service=service)
+
+    assert fake_st.selectbox_options == [["alpha-model", "zeta-model"]]
+    assert service.saved[0]["model"] == "zeta-model"

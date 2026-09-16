@@ -2,6 +2,7 @@ import subprocess
 
 from zprompt_helper.templates.builtin import load_builtin_templates
 from zprompt_helper.ui.workbench import (
+    _build_generation_service,
     apply_pending_workbench_widget_state,
     apply_generated_result,
     build_generation_request,
@@ -58,6 +59,24 @@ class FakeGenerationService:
 class FakeFailingGenerationService:
     def generate_blocks(self, **_: object) -> dict[str, str]:
         raise RuntimeError("API timeout")
+
+
+def test_build_generation_service_passes_key_and_base_url_to_factory() -> None:
+    captured: list[tuple[str, str]] = []
+    service = object()
+
+    def factory(api_key: str, base_url: str) -> object:
+        captured.append((api_key, base_url))
+        return service
+
+    result = _build_generation_service(
+        factory,
+        " sk-demo ",
+        " https://api.example.test/v1/ ",
+    )
+
+    assert result is service
+    assert captured == [("sk-demo", "https://api.example.test/v1")]
 
 
 class FakeColumn:

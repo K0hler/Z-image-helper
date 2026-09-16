@@ -32,7 +32,7 @@ PAGE_SPECS: dict[str, PageSpec] = {
     ),
     "settings": PageSpec(
         label="Settings",
-        eyebrow="OpenRouter And App Defaults",
+        eyebrow="API And App Defaults",
         summary="Control model defaults, generation settings, and API access.",
     ),
 }
